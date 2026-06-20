@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}User Management | CyberShield Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-users-gear text-primary me-2"></i> User Directory Manager</h3>
+    <button class="btn btn-cyber-primary font-monospace" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <i class="fa-solid fa-user-plus me-1"></i> ADD IDENTITY
+    </button>
+</div>
+
+<!-- Users Table Card -->
+<div class="cyber-card">
+    <!-- Filter Toolbar -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <!-- Role Filter Tabs -->
+        <div class="cyber-tabs-wrapper">
+            <ul class="nav nav-pills cyber-nav-pills" id="roleFilterTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-role="all" type="button">
+                        <i class="fa-solid fa-border-all me-1"></i> All Users
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-role="Employee" type="button">
+                        <i class="fa-solid fa-user me-1"></i> Employee
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-role="Manager" type="button">
+                        <i class="fa-solid fa-user-tie me-1"></i> Manager
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-role="Auditor" type="button">
+                        <i class="fa-solid fa-clipboard-check me-1"></i> Audit
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-role="Admin" type="button">
+                        <i class="fa-solid fa-user-shield me-1"></i> Admin
+                    </button>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Live Search Bar -->
+        <div class="cyber-search-wrapper" style="min-width: 320px;">
+            <div class="input-group">
+                <span class="input-group-text bg-black border-secondary text-secondary">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="userSearchInput" class="form-control cyber-input" placeholder="Search by name, email, or ID...">
+            </div>
+        </div>
+    </div>
+
+    <div class="cyber-table-container">
+        <table class="cyber-table">
+            <thead>
+                <tr>
+                    <th>Login ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>System Role</th>
+                    <th>Current Status</th>
+                    <th>Failed Logins</th>
+                    <th class="text-end">Administrative Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if users %}
+                    {% for u in users %}
+                    <tr class="user-row" data-role="{{ u.role }}" data-search="{{ u.username|lower }} {{ u.email|lower }} {{ u.login_id|lower }} #{{ u.id|lower }}">
+                        <td class="font-monospace text-secondary">{{ u.login_id }}</td>
+                        <td class="fw-bold">{{ u.username }}</td>
+                        <td class="text-secondary">{{ u.email }}</td>
+                        <td>
+                            <span class="badge bg-dark border border-secondary text-light font-monospace">{{ u.role }}</span>
+                        </td>
+                        <td>
+                            <span class="badge-custom badge-{{ u.status }}">
+                                <i class="fa-solid {% if u.status == 'active' %}fa-circle-check{% elif u.status == 'suspended' %}fa-circle-xmark{% else %}fa-circle-minus{% endif %}"></i>
+                                {{ u.status|upper }}
+                            </span>
+                        </td>
+                        <td class="font-monospace {% if u.failed_login_attempts >= 5 %}text-danger fw-bold{% elif u.failed_login_attempts > 0 %}text-warning{% else %}text-secondary{% endif %}">
+                            {{ u.failed_login_attempts }} / 5
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-2">
+                                <!-- Unlock button if locked or suspended -->
+                                {% if u.failed_login_attempts > 0 or u.status == 'suspended' %}
+                                <form action="{{ url_for('admin.unlock_user', user_id=u.id) }}" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-sm text-success border border-success font-monospace py-1 px-2" style="background-color: rgba(16, 185, 129, 0.15);" title="Unlock Account and Reset Attempts">
+                                        <i class="fa-solid fa-lock-open me-1"></i> Unlock
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <!-- Edit Action Button triggers modal -->
+                                <button class="btn btn-sm text-info border border-info font-monospace py-1 px-2" data-bs-toggle="modal" data-bs-target="#editUserModal{{ u.id }}" style="background-color: rgba(59, 130, 246, 0.15);" title="Edit Details">
+                                    <i class="fa-solid fa-pen-to-square me-1"></i> Edit
+                                </button>
+
+                                <!-- Delete Action Button -->
+                                <button type="button" class="btn btn-sm text-danger border border-danger font-monospace py-1 px-2" style="background-color: rgba(239, 68, 68, 0.15);" title="Delete User" onclick="triggerDeleteModal('{{ u.id }}', '{{ u.username }}')">
+                                    <i class="fa-solid fa-trash-can me-1"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+                    
+                    <!-- Client-side filter empty search result row -->
+                    <tr id="noMatchingUsers" style="display: none;">
+                        <td colspan="7" class="text-center text-secondary font-monospace py-5">
+                            <i class="fa-solid fa-user-slash text-warning mb-3 d-block" style="font-size: 2rem;"></i>
+                            <span class="text-light fw-bold d-block mb-1">No Matching Identities Found</span>
+                            <span class="text-secondary small">Try adjusting your search filters or queries.</span>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-secondary font-monospace py-4">
+                            No user identities found.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-secondary bg-dark text-light">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="fa-solid fa-user-plus text-primary me-1"></i> Provision New Identity</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin.create_user') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="create_username" class="form-label">Username</label>
+                        <input type="text" name="username" id="create_username" class="form-control bg-black text-light border-secondary" placeholder="e.g. jdoe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_email" class="form-label">Email Address</label>
+                        <input type="email" name="email" id="create_email" class="form-control bg-black text-light border-secondary" placeholder="jdoe@company.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_role" class="form-label">System Role</label>
+                        <select name="role" id="create_role" class="form-select bg-black text-light border-secondary">
+                            <option value="Employee">Employee (Standard Access)</option>
+                            <option value="Manager">Manager (Approving Authority)</option>
+                            <option value="Auditor">Compliance Auditor (Read Logs)</option>
+                            <option value="Admin">Administrator (Full Control)</option>
+                        </select>
+                    </div>
+                    <div class="mb-1">
+                        <label for="create_password" class="form-label">Temporary Password</label>
+                        <input type="password" name="password" id="create_password" class="form-control bg-black text-light border-secondary" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-cyber-primary">Provision Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Edit User Modals outside card/table container to prevent clipping -->
+{% if users %}
+    {% for u in users %}
+    <div class="modal fade" id="editUserModal{{ u.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-secondary bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title"><i class="fa-solid fa-user-pen text-primary me-1"></i> Edit Identity: {{ u.username }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ url_for('admin.edit_user', user_id=u.id) }}" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="edit_username_{{ u.id }}" class="form-label">Username</label>
+                            <input type="text" name="username" id="edit_username_{{ u.id }}" class="form-control bg-black text-light border-secondary" value="{{ u.username }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_email_{{ u.id }}" class="form-label">Email Address</label>
+                            <input type="email" name="email" id="edit_email_{{ u.id }}" class="form-control bg-black text-light border-secondary" value="{{ u.email }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_role_{{ u.id }}" class="form-label">System Role</label>
+                            <select name="role" id="edit_role_{{ u.id }}" class="form-select bg-black text-light border-secondary">
+                                <option value="Employee" {% if u.role == 'Employee' %}selected{% endif %}>Employee</option>
+                                <option value="Manager" {% if u.role == 'Manager' %}selected{% endif %}>Manager</option>
+                                <option value="Auditor" {% if u.role == 'Auditor' %}selected{% endif %}>Auditor</option>
+                                <option value="Admin" {% if u.role == 'Admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_status_{{ u.id }}" class="form-label">Account Status</label>
+                            <select name="status" id="edit_status_{{ u.id }}" class="form-select bg-black text-light border-secondary">
+                                <option value="active" {% if u.status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="suspended" {% if u.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                                <option value="inactive" {% if u.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                        <div class="mb-1">
+                            <label for="edit_password_{{ u.id }}" class="form-label">Change Password (leave blank to keep unchanged)</label>
+                            <input type="password" name="password" id="edit_password_{{ u.id }}" class="form-control bg-black text-light border-secondary" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-cyber-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Custom Bootstrap Deletion Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger bg-dark text-light shadow-lg">
+            <div class="modal-header border-danger">
+                <h5 class="modal-title text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-2 text-danger alert-pulse"></i> Destructive Operation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteTargetUsername" class="text-white"></strong>?</p>
+                <div class="alert alert-danger bg-danger bg-opacity-10 text-danger small p-3 mb-0">
+                    WARNING: This operation cannot be undone.
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteUserForm" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-cyber-rose font-monospace">Authorize Purge</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Define global delete modal trigger attached to window context
+window.triggerDeleteModal = function(userId, username) {
+    document.getElementById('deleteTargetUsername').textContent = username;
+    const form = document.getElementById('deleteUserForm');
+    if (form) {
+        form.action = "/admin/users/delete/" + userId;
+    }
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    modal.show();
+};
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('userSearchInput');
+    const filterTabs = document.querySelectorAll('#roleFilterTabs .nav-link');
+    const userRows = document.querySelectorAll('.user-row');
+    const noMatchingRow = document.getElementById('noMatchingUsers');
+
+    function filterUsers() {
+        const query = searchInput.value.toLowerCase().trim();
+        const activeTab = document.querySelector('#roleFilterTabs .nav-link.active');
+        const activeRole = activeTab ? activeTab.getAttribute('data-role') : 'all';
+
+        let visibleCount = 0;
+
+        userRows.forEach(row => {
+            const role = row.getAttribute('data-role');
+            const searchData = row.getAttribute('data-search');
+
+            const matchesRole = (activeRole === 'all' || role === activeRole);
+            const matchesSearch = searchData.includes(query);
+
+            if (matchesRole && matchesSearch) {
+                row.style.setProperty('display', '', 'important');
+                visibleCount++;
+            } else {
+                row.style.setProperty('display', 'none', 'important');
+            }
+        });
+
+        if (visibleCount === 0 && userRows.length > 0) {
+            noMatchingRow.style.setProperty('display', '', 'important');
+        } else {
+            noMatchingRow.style.setProperty('display', 'none', 'important');
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', filterUsers);
+    }
+
+    filterTabs.forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            filterTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            filterUsers();
+        });
+    });
+});
+</script>
+{% endblock %}
+

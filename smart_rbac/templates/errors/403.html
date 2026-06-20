@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% set no_sidebar = true %}
+
+{% block title %}Access Denied | CyberShield Forbidden{% endblock %}
+
+{% block auth_content %}
+<div class="auth-container">
+    <div class="auth-card alert-pulse">
+        <div class="auth-header">
+            <div class="auth-logo text-danger" style="font-size: 4rem;">
+                <i class="fa-solid fa-ban"></i>
+            </div>
+            <h2 class="fw-bold text-light mb-1">403 FORBIDDEN</h2>
+            <p class="text-danger font-monospace" style="font-size: 0.85rem; letter-spacing: 0.05em;">ACCESS RESTRICTION ENFORCED</p>
+        </div>
+
+        <div class="glass-panel text-center mb-4">
+            <p class="text-light mb-2">
+                You do not have the required fine-grained privileges to access this operational zone.
+            </p>
+            <p class="text-secondary font-monospace text-xs mb-0">
+                REQUIRED PRIVILEGE KEY: <span class="text-warning fw-semibold">{{ permission }}</span>
+            </p>
+        </div>
+
+        <div class="text-center gap-2 d-flex flex-column">
+            <a href="{{ url_for('auth.dashboard') }}" class="btn btn-cyber-primary font-monospace py-2">
+                <i class="fa-solid fa-gauge-high me-1"></i> Return to Safety Dashboard
+            </a>
+            
+            <a href="{{ url_for('requests.list_requests') }}" class="btn btn-cyber-outline font-monospace py-2">
+                <i class="fa-solid fa-file-signature me-1"></i> Request Privilege Upgrade
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

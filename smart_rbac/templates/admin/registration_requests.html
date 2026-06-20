@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Registration Approvals | CyberShield Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-file-circle-check text-primary me-2"></i> Registration Approval Requests</h3>
+        <p class="text-secondary mt-1 font-monospace" style="font-size:0.9rem;">Manage new user registration requests</p>
+    </div>
+    <div>
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('admin.registration_requests_list', status='pending') }}" 
+               class="btn btn-sm {% if current_status == 'pending' %}btn-cyber-primary{% else %}btn-cyber-outline{% endif %}">
+                ⏳ Pending
+                <span class="badge bg-warning text-dark ms-1">{{ requests|length if current_status == 'pending' else '' }}</span>
+            </a>
+            <a href="{{ url_for('admin.registration_requests_list', status='approved') }}" 
+               class="btn btn-sm {% if current_status == 'approved' %}btn-cyber-primary{% else %}btn-cyber-outline{% endif %}">
+                ✅ Approved
+            </a>
+            <a href="{{ url_for('admin.registration_requests_list', status='rejected') }}" 
+               class="btn btn-sm {% if current_status == 'rejected' %}btn-cyber-primary{% else %}btn-cyber-outline{% endif %}">
+                ❌ Rejected
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Requests Table Card -->
+<div class="cyber-card">
+    <div class="cyber-table-container">
+        <table class="cyber-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email Address</th>
+                    <th>System Role</th>
+                    <th>Login ID</th>
+                    <th>Current Status</th>
+                    <th>Request Date</th>
+                    {% if current_status in ['approved', 'rejected'] %}
+                    <th>Approved By</th>
+                    <th>Approval Date</th>
+                    {% endif %}
+                    <th class="text-end">Administrative Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if requests %}
+                    {% for req in requests %}
+                    <tr>
+                        <td class="fw-bold">{{ req.username }}</td>
+                        <td class="text-secondary">{{ req.email }}</td>
+                        <td>
+                            <span class="badge bg-dark border border-secondary text-light font-monospace">{{ req.role }}</span>
+                        </td>
+                        <td>
+                            <code class="text-info font-monospace">{{ req.login_id }}</code>
+                        </td>
+                        <td>
+                            {% if req.status == 'pending' %}
+                                <span class="badge-custom badge-pending_admin">
+                                    <i class="fa-solid fa-clock me-1"></i> PENDING
+                                </span>
+                            {% elif req.status == 'approved' %}
+                                <span class="badge-custom badge-approved">
+                                    <i class="fa-solid fa-circle-check me-1"></i> APPROVED
+                                </span>
+                            {% elif req.status == 'rejected' %}
+                                <span class="badge-custom badge-rejected">
+                                    <i class="fa-solid fa-circle-xmark me-1"></i> REJECTED
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary font-monospace">
+                            <small>{{ req.created_at.strftime('%Y-%m-%d %H:%M') if req.created_at else '-' }}</small>
+                        </td>
+                        {% if current_status in ['approved', 'rejected'] %}
+                        <td class="fw-bold">{{ req.approved_by or '-' }}</td>
+                        <td class="text-secondary font-monospace">
+                            <small>{{ req.approved_at.strftime('%Y-%m-%d %H:%M') if req.approved_at else '-' }}</small>
+                        </td>
+                        {% endif %}
+                        <td class="text-end">
+                            {% if current_status == 'pending' %}
+                            <div class="d-inline-flex gap-2">
+                                <button type="button" class="btn btn-sm text-success border border-success font-monospace py-1 px-2" style="background-color: rgba(16, 185, 129, 0.15);" data-bs-toggle="modal" data-bs-target="#approveModal{{ req.id }}">
+                                    <i class="fa-solid fa-check me-1"></i> Approve
+                                </button>
+                                <button type="button" class="btn btn-sm text-danger border border-danger font-monospace py-1 px-2" style="background-color: rgba(239, 68, 68, 0.15);" data-bs-toggle="modal" data-bs-target="#rejectModal{{ req.id }}">
+                                    <i class="fa-solid fa-xmark me-1"></i> Reject
+                                </button>
+                            </div>
+                            {% else %}
+                            <span class="text-secondary font-monospace">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="{% if current_status in ['approved', 'rejected'] %}9{% else %}7{% endif %}" class="text-center text-secondary font-monospace py-4">
+                            {% if current_status == 'pending' %}
+                            No pending registration requests found.
+                            {% elif current_status == 'approved' %}
+                            No approved requests found.
+                            {% elif current_status == 'rejected' %}
+                            No rejected requests found.
+                            {% else %}
+                            No registration requests.
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modals outside card/table container to prevent rendering glitches -->
+{% if current_status == 'pending' and requests %}
+    {% for req in requests %}
+    <!-- Approve Modal -->
+    <div class="modal fade" id="approveModal{{ req.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-secondary bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title"><i class="fa-solid fa-circle-check text-success me-1"></i> Approve Registration</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to <strong>approve</strong> this registration?</p>
+                    <div class="p-3 bg-black rounded border border-secondary mb-3">
+                        <strong>User:</strong> {{ req.username }}<br>
+                        <strong>Role:</strong> {{ req.role }}<br>
+                        <strong>Email:</strong> {{ req.email }}<br>
+                        <strong>Login ID:</strong> <code class="text-info">{{ req.login_id }}</code>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="{{ url_for('admin.approve_registration', req_id=req.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-cyber-primary">Confirm Approval</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div class="modal fade" id="rejectModal{{ req.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-secondary bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title"><i class="fa-solid fa-circle-xmark text-danger me-1"></i> Reject Registration</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ url_for('admin.reject_registration', req_id=req.id) }}">
+                    <div class="modal-body">
+                        <p>Are you sure you want to <strong>reject</strong> this registration?</p>
+                        <div class="p-3 bg-black rounded border border-secondary mb-3">
+                            <strong>User:</strong> {{ req.username }}<br>
+                            <strong>Role:</strong> {{ req.role }}<br>
+                            <strong>Email:</strong> {{ req.email }}<br>
+                            <strong>Login ID:</strong> <code class="text-info">{{ req.login_id }}</code>
+                        </div>
+                        <hr class="border-secondary">
+                        <div class="mb-3">
+                            <label class="form-label">Rejection Reason (optional):</label>
+                            <textarea class="form-control bg-black text-light border-secondary" name="approval_notes" rows="3" placeholder="Provide a reason for rejection..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-cyber-rose">Confirm Rejection</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+{% endblock %}

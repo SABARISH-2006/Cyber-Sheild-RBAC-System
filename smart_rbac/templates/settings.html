@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Settings | CyberShield{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-sliders text-primary me-2"></i> System Configurations</h3>
+</div>
+
+<div class="row g-4">
+    <!-- Configuration panel -->
+    <div class="col-xl-7">
+        <div class="cyber-card accent-blue">
+            <h4 class="fw-bold text-light mb-3"><i class="fa-solid fa-gears text-primary me-2"></i> Policy Engine Rules</h4>
+            
+            <form action="#" method="POST" onsubmit="event.preventDefault(); alert('Security settings are enforced by config.py and cannot be modified at runtime for security compliance.');">
+                <div class="mb-3">
+                    <label for="set_mfa" class="form-label">Conditional MFA Activation Risk Score Threshold</label>
+                    <input type="number" class="form-control cyber-input bg-black border-secondary" id="set_mfa" value="61" disabled readonly>
+                    <small class="form-text text-secondary">Any login with score &ge; 61 triggers mandatory 2FA OTP prompt.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="set_lockout" class="form-label">Brute-Force Lockout Failure Limit</label>
+                    <input type="number" class="form-control cyber-input bg-black border-secondary" id="set_lockout" value="5" disabled readonly>
+                    <small class="form-text text-secondary">Accounts automatically switch to suspended state after 5 failed password attempts.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label for="set_expiry" class="form-label">Access Token JWT Cookie Lifespan (Minutes)</label>
+                    <input type="number" class="form-control cyber-input bg-black border-secondary" id="set_expiry" value="60" disabled readonly>
+                    <small class="form-text text-secondary">Tokens auto-expire and trigger re-authentication after this period.</small>
+                </div>
+                
+                <button type="submit" class="btn btn-cyber-primary font-monospace" disabled>
+                    COMMIT SETTINGS <i class="fa-solid fa-circle-exclamation ms-1"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Testing Playground panel -->
+    <div class="col-xl-5">
+        <div class="cyber-card accent-amber">
+            <h4 class="fw-bold text-light mb-3"><i class="fa-solid fa-flask text-warning me-2"></i> RBA Simulation Lab</h4>
+            <p class="text-secondary text-sm mb-4">
+                Test how the Risk-Aware Authentication engine behaves by changing user characteristics or time factors.
+            </p>
+            
+            <div class="glass-panel text-start">
+                <h6 class="text-light font-monospace mb-2 text-xs fw-bold"><i class="fa-solid fa-circle-info text-warning me-1"></i> HOW TO TRIGGER CONDITIONAL MFA:</h6>
+                <p class="text-secondary font-monospace text-xs mb-3">
+                    1. Open an Incognito Window or use a different web browser (e.g. Edge instead of Chrome).<br>
+                    2. This triggers a device fingerprint shift (+30 score) and browser shift (+20 score).<br>
+                    3. Try logging in outside working hours (after 10 PM) for +20 time anomaly score.<br>
+                    4. Fail a password once on your account for +20 risk score, then login successfully.<br>
+                    5. Total score will exceed 61, forcing a 2FA OTP prompt!
+                </p>
+                <div class="border-top border-secondary my-3"></div>
+                <h6 class="text-light font-monospace mb-2 text-xs fw-bold"><i class="fa-solid fa-circle-info text-danger me-1"></i> HOW TO TRIGGER LOCKOUT:</h6>
+                <p class="text-secondary font-monospace text-xs mb-0">
+                    1. Try logging in with your username but enter incorrect passwords 5 times.<br>
+                    2. The account will lock. You must log in as an Admin to unlock it!
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

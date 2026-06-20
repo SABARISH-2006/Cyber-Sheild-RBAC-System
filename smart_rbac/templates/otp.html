@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% set no_sidebar = true %}
+
+{% block title %}Multi-Factor Verification | CyberShield{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cyber-auth-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%);
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyber-auth-container::before {
+        content: '';
+        position: absolute;
+        width: 350px;
+        height: 350px;
+        background: radial-gradient(circle, rgba(16, 185, 129, 0.07) 0%, transparent 70%);
+        top: 20%;
+        left: 25%;
+        pointer-events: none;
+    }
+
+    .cyber-auth-card {
+        width: 100%;
+        max-width: 480px;
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.95) 100%);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        box-shadow: 0 25px 55px rgba(0, 0, 0, 0.6), 0 0 30px rgba(16, 185, 129, 0.05);
+        padding: 2.5rem;
+        position: relative;
+        overflow: hidden;
+        animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .cyber-auth-header {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .cyber-auth-logo-mfa {
+        font-size: 2.75rem;
+        color: var(--accent-emerald);
+        filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.35));
+        margin-bottom: 0.75rem;
+        animation: mfaGlow 2.5s infinite alternate;
+    }
+    
+    @keyframes mfaGlow {
+        0% { filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.3)); transform: scale(1); }
+        100% { filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.65)); transform: scale(1.04); }
+    }
+
+    .info-panel-mfa {
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        color: #a7f3d0;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        font-size: 0.775rem;
+        line-height: 1.5;
+    }
+
+    .cyber-input-group {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(0, 0, 0, 0.2);
+        transition: all 0.25s ease;
+    }
+    .cyber-input-group:focus-within {
+        border-color: var(--accent-emerald);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+    }
+    .cyber-input-group-text {
+        background: rgba(255, 255, 255, 0.02) !important;
+        border: none !important;
+        color: var(--text-secondary) !important;
+        padding: 0.75rem 1rem !important;
+        display: flex;
+        align-items: center;
+    }
+    .cyber-input-field {
+        flex: 1 1 auto;
+        width: 1%;
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-primary) !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.9rem;
+    }
+    .cyber-input-field:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .btn-cyber-mfa {
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        border: none;
+        color: white;
+        border-radius: 10px;
+        padding: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+    }
+    .btn-cyber-mfa:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    }
+
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block auth_content %}
+<div class="cyber-auth-container">
+    <div class="cyber-auth-card">
+        <div class="cyber-auth-header">
+            <div class="cyber-auth-logo-mfa">
+                <i class="fa-solid fa-fingerprint"></i>
+            </div>
+            <h3 class="fw-bold text-light mb-1">MFA SECURE VERIFICATION</h3>
+            <p class="text-secondary font-monospace mb-0" style="font-size: 0.75rem; letter-spacing: 0.05em;">ENTER 6-DIGIT CODE</p>
+        </div>
+
+        <div class="info-panel-mfa mb-4">
+            <p class="mb-0">
+                <i class="fa-solid fa-circle-info me-1"></i> A secure 6-digit access code was generated for user <strong>{{ username }}</strong>. If configured, it was dispatched to your mail. Otherwise, the simulated code was printed to the Flask terminal console.
+            </p>
+        </div>
+
+        <form action="{{ url_for('auth.verify_otp') }}" method="POST">
+            <div class="mb-4">
+                <label for="otp_code" class="form-label font-monospace text-xs mb-1.5">Verification Code</label>
+                <div class="cyber-input-group">
+                    <span class="cyber-input-group-text"><i class="fa-solid fa-shield-halved"></i></span>
+                    <input type="text" name="otp_code" id="otp_code" class="cyber-input-field text-center font-monospace fw-bold" placeholder="000000" maxlength="6" autofocus required style="font-size: 1.35rem; letter-spacing: 0.35em;">
+                </div>
+                <small class="form-text text-secondary d-block mt-2 font-monospace" style="font-size: 0.7rem;">
+                    * Expiration period: 5 minutes.
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-cyber-mfa w-100 font-monospace py-2">
+                VERIFY & LOG IN <i class="fa-solid fa-check ms-1"></i>
+            </button>
+        </form>
+        
+        <div class="d-flex justify-content-between align-items-center mt-4 border-top border-secondary pt-3">
+            <!-- Resend Form -->
+            <form action="{{ url_for('auth.resend_otp') }}" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-cyber-outline font-monospace py-1.5 px-3 btn-sm text-xs" style="font-size: 0.725rem;">
+                    <i class="fa-solid fa-rotate-right me-1"></i> Resend Code
+                </button>
+            </form>
+            
+            <a href="{{ url_for('auth.logout') }}" class="text-secondary font-monospace text-xs" style="text-decoration: none;">
+                <i class="fa-solid fa-arrow-left me-1"></i> Cancel Login
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

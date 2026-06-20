@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Threat Analytics | CyberShield UBA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-triangle-exclamation text-primary me-2"></i> Threat Detection & Behavioral Analytics</h3>
+    <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-monospace py-2 px-3">UBA SHIELD ACTIVE</span>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Stat 1: High Risk Scenarios Flagged -->
+    <div class="col-md-6 col-xl-3">
+        <div class="cyber-card accent-rose d-flex flex-column justify-content-between h-100">
+            <h6 class="text-secondary font-monospace text-xs mb-1">HIGH RISK LOGINS</h6>
+            <h3 class="fw-bold mb-0 text-light">{{ high_risk_count }}</h3>
+            <small class="text-secondary font-monospace">Score &ge; 61 triggered</small>
+        </div>
+    </div>
+    
+    <!-- Stat 2: Lockouts applied -->
+    <div class="col-md-6 col-xl-3">
+        <div class="cyber-card accent-rose d-flex flex-column justify-content-between h-100">
+            <h6 class="text-secondary font-monospace text-xs mb-1">BRUTE-FORCE LOCKOUTS</h6>
+            <h3 class="fw-bold mb-0 text-light">{{ locked_count }}</h3>
+            <small class="text-secondary font-monospace">Suspended accounts</small>
+        </div>
+    </div>
+    
+    <!-- Stat 3: Alert Resolution Ratio -->
+    <div class="col-md-6 col-xl-3">
+        <div class="cyber-card accent-emerald d-flex flex-column justify-content-between h-100">
+            <h6 class="text-secondary font-monospace text-xs mb-1">ALERTS STATE</h6>
+            <h3 class="fw-bold mb-0 text-light">
+                {% set total = alerts|length %}
+                {% set resolved = alerts|selectattr('status', 'equalto', 'resolved')|list|length %}
+                {{ resolved }} / {{ total }}
+            </h3>
+            <small class="text-secondary font-monospace">Resolved security alerts</small>
+        </div>
+    </div>
+
+    <!-- Stat 4: Threat Level Status -->
+    <div class="col-md-6 col-xl-3">
+        <div class="cyber-card {% if total - resolved > 0 %}accent-rose{% else %}accent-emerald{% endif %} d-flex flex-column justify-content-between h-100">
+            <h6 class="text-secondary font-monospace text-xs mb-1">THREAT INCIDENT STATUS</h6>
+            <h3 class="fw-bold mb-0 text-light">
+                {% if total - resolved > 0 %}WARN{% else %}SECURE{% endif %}
+            </h3>
+            <small class="text-secondary font-monospace">Current status threat assessment</small>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Charts -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="cyber-card">
+            <h5 class="fw-bold text-light mb-3"><i class="fa-solid fa-chart-pie text-primary me-2"></i> Behavioral Alert Categories</h5>
+            <div style="height: 300px; position: relative;">
+                <canvas id="alertDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="cyber-card">
+            <h5 class="fw-bold text-light mb-3"><i class="fa-solid fa-chart-bar text-success me-2"></i> Audit Action Volumes (Top 7)</h5>
+            <div style="height: 300px; position: relative;">
+                <canvas id="actionTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts Table Queue -->
+<div class="cyber-card">
+    <h5 class="fw-bold text-light mb-3"><i class="fa-solid fa-bell-slash text-danger me-2"></i> Behavioral Anomaly Alarm Queue</h5>
+    
+    <div class="cyber-table-container">
+        <table class="cyber-table">
+            <thead>
+                <tr>
+                    <th>Alert ID</th>
+                    <th>User Affected</th>
+                    <th>Alarm Category</th>
+                    <th>Trigger Details</th>
+                    <th>Incident Time</th>
+                    <th>Status</th>
+                    <th class="text-end">Incident Response</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if alerts %}
+                    {% for a in alerts %}
+                    <tr class="{% if a.status == 'open' %}alert-pulse{% endif %}">
+                        <td class="font-monospace text-secondary">#{{ a.id }}</td>
+                        <td class="fw-bold text-light">{{ a.username }}</td>
+                        <td>
+                            <span class="badge {% if a.alert_type == 'BRUTE_FORCE' %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %} font-monospace text-xs">
+                                {{ a.alert_type }}
+                            </span>
+                        </td>
+                        <td class="text-secondary text-xs" style="max-width: 250px;">{{ a.description }}</td>
+                        <td class="font-monospace text-secondary text-xs">{{ a.triggered_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <span class="badge-custom badge-{% if a.status == 'open' %}suspended{% else %}active{% endif %}">
+                                <i class="fa-solid {% if a.status == 'open' %}fa-triangle-exclamation{% else %}fa-check{% endif %}"></i>
+                                {{ a.status|upper }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            {% if a.status == 'open' %}
+                            <form action="{{ url_for('telemetry.resolve_alert', alert_id=a.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-cyber-primary py-1 font-monospace" style="font-size: 0.75rem;">
+                                    <i class="fa-solid fa-check-double me-1"></i> Resolve
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-secondary font-monospace text-xs"><i class="fa-solid fa-lock"></i> Resolved</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-secondary font-monospace py-4">
+                            No behavioral alerts or alarms detected.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

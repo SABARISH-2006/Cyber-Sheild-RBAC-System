@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | CyberShield Security Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Metric 1: Total Identity Pool -->
+    <div class="col-xl-3 col-sm-6">
+        <div class="cyber-card accent-blue d-flex flex-column justify-content-between h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="text-secondary uppercase-header font-monospace text-xs mb-1">IDENTITY POOL</h6>
+                    <h3 class="fw-bold mb-0 text-light">{{ stats.users_count }}</h3>
+                </div>
+                <div class="bg-primary-subtle text-primary p-3 rounded-3">
+                    <i class="fa-solid fa-users fa-xl"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="text-success text-sm fw-semibold"><i class="fa-solid fa-circle-check me-1"></i> Active</span>
+                <span class="text-secondary text-xs font-monospace ms-2">Registered Accounts</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metric 2: Pending Privilege Grants -->
+    <div class="col-xl-3 col-sm-6">
+        <div class="cyber-card accent-amber d-flex flex-column justify-content-between h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="text-secondary uppercase-header font-monospace text-xs mb-1">PRIVILEGE REQUESTS</h6>
+                    <h3 class="fw-bold mb-0 text-light">{{ stats.pending_requests_count }}</h3>
+                </div>
+                <div class="bg-warning-subtle text-warning p-3 rounded-3">
+                    <i class="fa-solid fa-envelope-open-text fa-xl"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="text-warning text-sm fw-semibold"><i class="fa-solid fa-clock-rotate-left me-1"></i> Sequential</span>
+                <span class="text-secondary text-xs font-monospace ms-2">Pending Decision</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metric 3: Active Threats / UBA Alerts -->
+    <div class="col-xl-3 col-sm-6">
+        <div class="cyber-card accent-rose d-flex flex-column justify-content-between h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="text-secondary uppercase-header font-monospace text-xs mb-1">BEHAVIORAL ALERTS</h6>
+                    <h3 class="fw-bold mb-0 text-light {% if stats.open_alerts_count > 0 %}text-danger alert-pulse{% endif %}">{{ stats.open_alerts_count }}</h3>
+                </div>
+                <div class="bg-danger-subtle text-danger p-3 rounded-3">
+                    <i class="fa-solid fa-triangle-exclamation fa-xl"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="text-danger text-sm fw-semibold">
+                    <i class="fa-solid {% if stats.open_alerts_count > 0 %}fa-circle-exclamation{% else %}fa-circle-check{% endif %} me-1"></i>
+                    {% if stats.open_alerts_count > 0 %}Action Required{% else %}System Healthy{% endif %}
+                </span>
+                <span class="text-secondary text-xs font-monospace ms-2">Active Alarms</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metric 4: Average Risk Assessment -->
+    <div class="col-xl-3 col-sm-6">
+        <div class="cyber-card {% if stats.avg_risk_score >= 61 %}accent-rose{% elif stats.avg_risk_score >= 31 %}accent-amber{% else %}accent-emerald{% endif %} d-flex flex-column justify-content-between h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="text-secondary uppercase-header font-monospace text-xs mb-1">MEAN SESSION RISK</h6>
+                    <h3 class="fw-bold mb-0 text-light">{{ "%.1f"|format(stats.avg_risk_score) }}</h3>
+                </div>
+                <div class="p-3 rounded-3 bg-dark-subtle border border-secondary">
+                    <i class="fa-solid fa-gauge-simple-high fa-xl text-secondary"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="{% if stats.avg_risk_score >= 61 %}text-danger{% elif stats.avg_risk_score >= 31 %}text-warning{% else %}text-success{% endif %} text-sm fw-semibold">
+                    <i class="fa-solid fa-shield-virus me-1"></i>
+                    {% if stats.avg_risk_score >= 61 %}High Alert{% elif stats.avg_risk_score >= 31 %}Moderate{% else %}Secure Zone{% endif %}
+                </span>
+                <span class="text-secondary text-xs font-monospace ms-2">Risk Factor</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Telemetry Analytics Charts -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="cyber-card">
+            <h5 class="fw-bold text-light mb-3"><i class="fa-solid fa-users-gear text-primary me-2"></i> Role Matrix Distribution</h5>
+            <div style="height: 300px; position: relative;">
+                <canvas id="roleDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="cyber-card">
+            <h5 class="fw-bold text-light mb-3"><i class="fa-solid fa-shield-halved text-success me-2"></i> Session Risk Profiles</h5>
+            <div style="height: 300px; position: relative;">
+                <canvas id="riskDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="cyber-card h-100">
+            <h5 class="fw-bold text-light mb-3"><i class="fa-solid fa-list-check text-primary me-2"></i> Real-time Security Event Stream</h5>
+            <div class="cyber-table-container">
+                <table class="cyber-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Action Details</th>
+                            <th>Origin IP</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if stats.recent_logs %}
+                            {% for log in stats.recent_logs %}
+                            <tr>
+                                <td class="fw-bold">{{ log.username }}</td>
+                                <td class="font-monospace text-xs">{{ log.action }}</td>
+                                <td class="font-monospace text-secondary">{{ log.ip_address }}</td>
+                                <td class="text-secondary">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-secondary font-monospace py-4">
+                                    No audit logs recorded yet.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="cyber-card h-100">
+            <h5 class="fw-bold text-light mb-3"><i class="fa-solid fa-diagram-project text-secondary me-2"></i> Quick Information</h5>
+            <div class="glass-panel text-start">
+                <h6 class="text-light font-monospace mb-2" style="font-size: 0.85rem;"><i class="fa-solid fa-key text-warning me-1"></i> Current Access Token</h6>
+                <div class="bg-black bg-opacity-40 p-2 rounded border border-secondary text-secondary font-monospace text-xs mb-3 overflow-hidden text-truncate">
+                    {{ request.cookies.get('access_token', 'No Session Token Found') }}
+                </div>
+                
+                <h6 class="text-light font-monospace mb-2" style="font-size: 0.85rem;"><i class="fa-solid fa-circle-nodes text-primary me-1"></i> RBA Configuration</h6>
+                <p class="text-secondary font-monospace text-xs mb-0">
+                    - Conditional MFA limit: Score &ge; 61<br>
+                    - Auto accounts lockout threshold: 5 attempts<br>
+                    - Token expiration window: 60 minutes<br>
+                    - Target Database status: Connected
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

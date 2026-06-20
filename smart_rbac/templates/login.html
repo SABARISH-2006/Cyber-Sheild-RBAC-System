@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% set no_sidebar = true %}
+
+{% block title %}Authentication Portal | CyberShield Smart RBAC{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Login Styles */
+    .cyber-auth-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(rgba(9, 13, 22, 0.8), rgba(9, 13, 22, 0.8)), url("/static/images/cyber_register_bg.png") no-repeat center center fixed;
+        background-size: cover;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Glowing background node indicators */
+    .cyber-auth-container::before {
+        content: '';
+        position: absolute;
+        width: 350px;
+        height: 350px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+        top: 15%;
+        left: 20%;
+        pointer-events: none;
+    }
+    .cyber-auth-container::after {
+        content: '';
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+        bottom: 15%;
+        right: 20%;
+        pointer-events: none;
+    }
+
+    .cyber-auth-card {
+        width: 100%;
+        max-width: 480px;
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 20px;
+        box-shadow: 0 25px 55px rgba(0, 0, 0, 0.6), 0 0 30px rgba(59, 130, 246, 0.05);
+        padding: 2.5rem;
+        position: relative;
+        overflow: hidden;
+        animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .cyber-auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .cyber-auth-logo {
+        font-size: 2.75rem;
+        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #1d4ed8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.3));
+        margin-bottom: 0.75rem;
+        animation: logoPulse 3s infinite alternate;
+    }
+    
+    @keyframes logoPulse {
+        0% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.25)); }
+        100% { transform: scale(1.05); filter: drop-shadow(0 0 22px rgba(59, 130, 246, 0.5)); }
+    }
+
+    /* Cyber Security Status Indicator Dashboard */
+    .status-panel-custom {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+    }
+    .status-panel-custom .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
+    }
+    .status-panel-custom .status-row:last-child {
+        margin-bottom: 0;
+    }
+    .status-indicator-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 4px;
+    }
+    .dot-green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .dot-blue { background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+    .dot-amber { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+
+    /* Custom pill navigations */
+    .cyber-nav-pills {
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 0.3rem;
+    }
+    
+    .cyber-nav-pills .nav-item .nav-link {
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0.5rem 0.75rem;
+        color: var(--text-secondary) !important;
+    }
+    .cyber-nav-pills .nav-item .nav-link.active {
+        background-color: var(--accent-blue) !important;
+        color: white !important;
+        box-shadow: 0 4px 12px var(--accent-blue-glow);
+    }
+    .cyber-nav-pills .nav-item .nav-link:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text-primary) !important;
+    }
+
+    /* Custom Input fields with glowing transitions */
+    .cyber-input-group {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(0, 0, 0, 0.2);
+        transition: all 0.25s ease;
+    }
+    .cyber-input-group:focus-within {
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px var(--accent-blue-glow);
+    }
+    .cyber-input-group-text {
+        background: rgba(255, 255, 255, 0.02) !important;
+        border: none !important;
+        color: var(--text-secondary) !important;
+        padding: 0.75rem 1rem !important;
+        display: flex;
+        align-items: center;
+    }
+    .cyber-input-field {
+        flex: 1 1 auto;
+        width: 1%;
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-primary) !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.9rem;
+    }
+    .cyber-input-field:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    .cyber-input-field::placeholder {
+        color: #475569;
+    }
+
+    .form-select.cyber-input-field {
+        background-color: #0f172a !important; /* prevent default white bg in dropdown option list */
+        cursor: pointer;
+    }
+
+    .btn-cyber-submit {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border: none;
+        color: white;
+        border-radius: 10px;
+        padding: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+    }
+    .btn-cyber-submit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+        background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+    }
+    .btn-cyber-submit:active {
+        transform: translateY(1px);
+    }
+</style>
+{% endblock %}
+
+{% block auth_content %}
+<div class="cyber-auth-container">
+    <div class="cyber-auth-card">
+        <div class="cyber-auth-header">
+            <div class="cyber-auth-logo">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h3 class="fw-bold text-light mb-1">CYBER SHIELD</h3>
+            <p class="text-secondary font-monospace mb-0" style="font-size: 0.8rem; letter-spacing: 0.05em;">SMART RBAC ACCESS NODE</p>
+        </div>
+
+        <!-- Security status indicator console -->
+        <div class="status-panel-custom">
+            <div class="status-row">
+                <span class="text-secondary"><i class="fa-solid fa-circle-nodes me-1"></i> NODE_STATUS:</span>
+                <span class="text-light fw-bold"><span class="status-indicator-dot dot-green"></span>SECURED</span>
+            </div>
+            <div class="status-row">
+                <span class="text-secondary"><i class="fa-solid fa-lock-open me-1"></i> MFA_MANDATE:</span>
+                <span class="text-info fw-bold"><span class="status-indicator-dot dot-blue"></span>FORCED (6-DIGIT)</span>
+            </div>
+            <div class="status-row">
+                <span class="text-secondary"><i class="fa-solid fa-fingerprint me-1"></i> TELEMETRY:</span>
+                <span class="text-warning fw-bold"><span class="status-indicator-dot dot-amber"></span>ACTIVE_MONITOR</span>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills nav-fill cyber-nav-pills mb-4" id="authTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-light font-monospace {% if active_tab == 'login' %}active{% endif %}" id="login-tab" data-bs-toggle="tab" data-bs-target="#login-panel" type="button" role="tab">SIGN IN</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-light font-monospace {% if active_tab == 'register' %}active{% endif %}" id="register-tab" data-bs-toggle="tab" data-bs-target="#register-panel" type="button" role="tab">REGISTER</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link text-light font-monospace {% if active_tab == 'forgot' %}active{% endif %}" id="forgot-tab" data-bs-toggle="tab" data-bs-target="#forgot-panel" type="button" role="tab">RECOVER</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="authTabsContent">
+            <!-- Login Form -->
+            <div class="tab-pane fade {% if active_tab == 'login' %}show active{% endif %}" id="login-panel" role="tabpanel">
+                <form action="{{ url_for('auth.login') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="login_id" class="form-label font-monospace text-xs mb-1.5">Login ID</label>
+                        <div class="cyber-input-group">
+                            <span class="cyber-input-group-text"><i class="fa-solid fa-id-badge"></i></span>
+                            <input type="text" name="login_id" id="login_id" class="cyber-input-field" placeholder="e.g., EMP001, MGR005, ADMIN001" required autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="login_password" class="form-label font-monospace text-xs mb-1.5">Secret Keyphrase</label>
+                        <div class="cyber-input-group">
+                            <span class="cyber-input-group-text"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" name="password" id="login_password" class="cyber-input-field" placeholder="••••••••" required autocomplete="current-password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-cyber-submit w-100 font-monospace">
+                        AUTHENTICATE ACCESS <i class="fa-solid fa-shield ms-1"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Registration Form -->
+            <div class="tab-pane fade {% if active_tab == 'register' %}show active{% endif %}" id="register-panel" role="tabpanel">
+                <form action="{{ url_for('auth.register') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="reg_username" class="form-label font-monospace text-xs mb-1.5">Username</label>
+                        <div class="cyber-input-group">
+                            <span class="cyber-input-group-text"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" name="username" id="reg_username" class="cyber-input-field" placeholder="Choose username" required autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reg_email" class="form-label font-monospace text-xs mb-1.5">Secure Email</label>
+                        <div class="cyber-input-group">
+                            <span class="cyber-input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                            <input type="email" name="email" id="reg_email" class="cyber-input-field" placeholder="name@company.com" required autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reg_password" class="form-label font-monospace text-xs mb-1.5">Password</label>
+                        <div class="cyber-input-group">
+                            <span class="cyber-input-group-text"><i class="fa-solid fa-key"></i></span>
+                            <input type="password" name="password" id="reg_password" class="cyber-input-field" placeholder="Strong password" required autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="reg_role" class="form-label font-monospace text-xs mb-1.5">Initial Security Role</label>
+                        <div class="cyber-input-group">
+                            <span class="cyber-input-group-text"><i class="fa-solid fa-id-card"></i></span>
+                            <select name="role" id="reg_role" class="cyber-input-field form-select border-0">
+                                <option value="Employee">Employee (Standard Access)</option>
+                                <option value="Manager">Manager (Approving Authority)</option>
+                                <option value="Auditor">Compliance Auditor (Read Logs)</option>
+                                <option value="Admin">Administrator (Full Control)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-cyber-submit w-100 font-monospace">
+                        PROVISION IDENTITY <i class="fa-solid fa-user-plus ms-1"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div class="tab-pane fade {% if active_tab == 'forgot' %}show active{% endif %}" id="forgot-panel" role="tabpanel">
+                <form action="{{ url_for('auth.forgot_password') }}" method="POST">
+                    <p class="text-secondary font-monospace mb-3" style="font-size: 0.725rem; line-height: 1.5;">
+                        <i class="fa-solid fa-circle-info text-info me-1"></i> Enter your registered email address. If the email is configured, a password recovery link will be sent. Otherwise, the simulated recovery link will be printed to the Flask terminal console.
+                    </p>
+                    <div class="mb-4">
+                        <label for="forgot_email" class="form-label font-monospace text-xs mb-1.5">Registered Email</label>
+                        <div class="cyber-input-group">
+                            <span class="cyber-input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                            <input type="email" name="email" id="forgot_email" class="cyber-input-field" placeholder="name@company.com" required autocomplete="email">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-cyber-submit w-100 font-monospace">
+                        REQUEST RECOVERY LINK <i class="fa-solid fa-paper-plane ms-1"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

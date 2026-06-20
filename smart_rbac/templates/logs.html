@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Trails | CyberShield Logs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-list-check text-primary me-2"></i> Security Audit Trail</h3>
+    <!-- Export CSV Link -->
+    <a href="{{ url_for('telemetry.export_logs_csv') }}" class="btn btn-cyber-outline font-monospace">
+        <i class="fa-solid fa-file-csv text-success me-1"></i> EXPORT COMPLIANCE CSV
+    </a>
+</div>
+
+<!-- Searching & Filtering Form -->
+<div class="cyber-card mb-4">
+    <form action="{{ url_for('telemetry.logs_trail') }}" method="GET" class="row g-3">
+        <div class="col-md-5">
+            <label for="search_input" class="form-label">Search Keywords</label>
+            <div class="input-group">
+                <span class="input-group-text border-secondary bg-dark-subtle text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                <input type="text" name="search" id="search_input" class="form-control cyber-input" placeholder="Search by username, action description, or IP..." value="{{ search_query }}">
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="action_filter" class="form-label">Action Category</label>
+            <select name="action" id="action_filter" class="form-select cyber-input font-monospace">
+                <option value="">-- All Actions --</option>
+                {% for action_type in distinct_actions %}
+                <option value="{{ action_type }}" {% if action_filter == action_type %}selected{% endif %}>{{ action_type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-4 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-cyber-primary flex-grow-1 font-monospace py-2 d-flex align-items-center justify-content-center">
+                <i class="fa-solid fa-filter me-1"></i> Filter
+            </button>
+            <a href="{{ url_for('telemetry.logs_trail') }}" class="btn btn-cyber-outline flex-grow-1 font-monospace text-center text-decoration-none py-2 d-flex align-items-center justify-content-center">
+                <i class="fa-solid fa-rotate-left me-1"></i> Clear
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Logs Output Card -->
+<div class="cyber-card">
+    <div class="cyber-table-container">
+        <table class="cyber-table">
+            <thead>
+                <tr>
+                    <th>Log ID</th>
+                    <th>Username</th>
+                    <th>Action Executed</th>
+                    <th>Source IP Address</th>
+                    <th>UTC Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                    {% for l in logs %}
+                    <tr>
+                        <td class="font-monospace text-secondary">#{{ l.id }}</td>
+                        <td class="fw-bold">{{ l.username }}</td>
+                        <td class="font-monospace text-xs text-light" style="max-width: 320px; word-wrap: break-word; white-space: normal;">
+                            {{ l.action }}
+                        </td>
+                        <td class="font-monospace text-secondary">{{ l.ip_address }}</td>
+                        <td class="text-secondary font-monospace">{{ l.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-secondary font-monospace py-4">
+                            No matching audit log trails found.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

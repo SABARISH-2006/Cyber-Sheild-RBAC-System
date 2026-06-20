@@ -1,0 +1,750 @@
+{% extends "base.html" %}
+
+{% block title %}Role & Privilege Matrix | CyberShield Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Grid Cards */
+    .role-grid-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        padding: 1.75rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .role-grid-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(59, 130, 246, 0.35);
+        box-shadow: 0 16px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.15);
+    }
+    .role-grid-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 140px;
+        height: 140px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .role-system-border {
+        border-left: 4px solid var(--accent-blue) !important;
+    }
+    .role-custom-border {
+        border-left: 4px solid var(--accent-amber) !important;
+    }
+    
+    /* Coverage Meter */
+    .coverage-meter-container {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .coverage-meter-bar {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .meter-high {
+        background: linear-gradient(90deg, #3b82f6, #10b981);
+    }
+    .meter-medium {
+        background: linear-gradient(90deg, #3b82f6, #f59e0b);
+    }
+    .meter-low {
+        background: linear-gradient(90deg, #f59e0b, #ef4444);
+    }
+    
+    /* Privilege Chips */
+    .privilege-chip {
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #cbd5e1;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.725rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        cursor: default;
+    }
+    .privilege-chip:hover {
+        background: rgba(59, 130, 246, 0.12);
+        border-color: rgba(59, 130, 246, 0.35);
+        color: #60a5fa;
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    .privilege-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--accent-emerald);
+        box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    /* Badges */
+    .badge-custom-system {
+        background: rgba(59, 130, 246, 0.1);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        padding: 0.25rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+    }
+    .badge-custom-user {
+        background: rgba(245, 158, 11, 0.1);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        padding: 0.25rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+    }
+
+    /* Stats Card Premium */
+    .stats-card-premium {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.45) 0%, rgba(15, 23, 42, 0.7) 100%);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: var(--border-radius);
+        padding: 1.25rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+    .stats-card-premium:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+    .stats-glow-blue { box-shadow: inset 0 0 12px rgba(59, 130, 246, 0.05); }
+    .stats-glow-info { box-shadow: inset 0 0 12px rgba(13, 202, 240, 0.05); }
+    .stats-glow-warning { box-shadow: inset 0 0 12px rgba(245, 158, 11, 0.05); }
+
+    /* Toolbar & Search Styles */
+    .search-wrapper {
+        position: relative;
+    }
+    .search-wrapper i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+    .search-input-custom {
+        padding-left: 35px !important;
+    }
+    
+    .view-btn-group .btn {
+        padding: 0.5rem 1.25rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 1px solid var(--border-color);
+        background: rgba(30, 41, 59, 0.4);
+        color: var(--text-secondary);
+        transition: all 0.2s ease;
+    }
+    .view-btn-group .btn:hover {
+        background: rgba(30, 41, 59, 0.7);
+        color: var(--text-primary);
+    }
+    .view-btn-group .btn.active {
+        background: var(--accent-blue);
+        color: white;
+        border-color: var(--accent-blue);
+        box-shadow: 0 4px 12px var(--accent-blue-glow);
+    }
+    
+    /* 2D Matrix board layout */
+    .matrix-table-wrapper {
+        overflow: auto;
+        max-height: 600px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .matrix-table {
+        margin: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+    .matrix-table th, .matrix-table td {
+        border: 1px solid rgba(255, 255, 255, 0.03) !important;
+        padding: 0.9rem 1.25rem;
+        white-space: nowrap;
+    }
+    .matrix-table th {
+        position: sticky;
+        top: 0;
+        background: #0f172a !important;
+        z-index: 10;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--border-color) !important;
+    }
+    .matrix-table td:first-child, .matrix-table th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 8;
+        background: #0f172a;
+        border-right: 1px solid var(--border-color) !important;
+    }
+    .matrix-table th:first-child {
+        z-index: 11;
+    }
+    .matrix-row:hover {
+        background: rgba(59, 130, 246, 0.04) !important;
+    }
+    .matrix-cell {
+        text-align: center;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    .matrix-cell:hover::after {
+        content: '';
+        position: absolute;
+        top: -9999px;
+        bottom: -9999px;
+        left: 0;
+        right: 0;
+        background-color: rgba(59, 130, 246, 0.06);
+        z-index: 1;
+        pointer-events: none;
+    }
+    .matrix-cell:hover {
+        background-color: rgba(59, 130, 246, 0.12) !important;
+        z-index: 2;
+    }
+    .matrix-indicator {
+        font-size: 1.15rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    .status-granted {
+        color: var(--accent-emerald);
+        text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }
+    .status-denied {
+        color: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Custom Permission Toggle inside Modals */
+    .perm-toggle-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .perm-item-wrapper {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s ease;
+    }
+    .perm-item-wrapper:hover {
+        border-color: rgba(59, 130, 246, 0.2);
+        background: rgba(59, 130, 246, 0.05);
+    }
+    .perm-item-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        text-align: left;
+    }
+    .perm-item-title {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    .perm-item-desc {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+    
+    .form-switch .form-check-input {
+        width: 2.2em;
+        height: 1.1em;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+    }
+    .form-switch .form-check-input:checked {
+        background-color: var(--accent-emerald);
+        border-color: var(--accent-emerald);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    }
+
+    .modal-content-premium {
+        border-radius: 16px; 
+        border: 1px solid rgba(255,255,255,0.08); 
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-user-shield text-primary me-2"></i> Role & Privilege Matrix</h3>
+    <div class="d-flex gap-2">
+        <button class="btn btn-cyber-outline font-monospace py-2" data-bs-toggle="modal" data-bs-target="#cloneRoleModal">
+            <i class="fa-solid fa-copy me-1"></i> CLONE ROLE
+        </button>
+        <button class="btn btn-cyber-primary font-monospace py-2" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+            <i class="fa-solid fa-plus me-1"></i> CREATE ROLE
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Header Banner -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stats-card-premium stats-glow-blue d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-secondary font-monospace text-xs mb-1 d-block">TOTAL ROLES</small>
+                <h4 class="fw-bold text-light mb-0">{{ roles|length }}</h4>
+            </div>
+            <div class="text-primary"><i class="fa-solid fa-user-shield fa-2xl"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card-premium stats-glow-info d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-secondary font-monospace text-xs mb-1 d-block">SYSTEM DEFINED</small>
+                <h4 class="fw-bold text-light mb-0">4</h4>
+            </div>
+            <div class="text-info"><i class="fa-solid fa-gears fa-2xl"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stats-card-premium stats-glow-warning d-flex justify-content-between align-items-center">
+            <div>
+                <small class="text-secondary font-monospace text-xs mb-1 d-block">CUSTOM DEFINED</small>
+                <h4 class="fw-bold text-light mb-0">{{ roles|length - 4 if roles|length > 4 else 0 }}</h4>
+            </div>
+            <div class="text-warning"><i class="fa-solid fa-screwdriver-wrench fa-2xl"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Controls Toolbar -->
+<div class="row g-3 align-items-center mb-4">
+    <!-- Search -->
+    <div class="col-md-4">
+        <div class="search-wrapper">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="roleSearchInput" class="form-control cyber-input search-input-custom w-100" placeholder="Search roles..." onkeyup="filterRoles()">
+        </div>
+    </div>
+    
+    <!-- Filter Type -->
+    <div class="col-md-4 d-flex justify-content-md-center justify-content-start gap-2">
+        <button class="btn btn-cyber-outline py-2 font-monospace text-xs filter-btn active" data-filter="all" onclick="setRoleFilter('all')">ALL</button>
+        <button class="btn btn-cyber-outline py-2 font-monospace text-xs filter-btn" data-filter="system" onclick="setRoleFilter('system')">SYSTEM</button>
+        <button class="btn btn-cyber-outline py-2 font-monospace text-xs filter-btn" data-filter="custom" onclick="setRoleFilter('custom')">CUSTOM</button>
+    </div>
+    
+    <!-- View Toggle -->
+    <div class="col-md-4 d-flex justify-content-md-end justify-content-start">
+        <div class="view-btn-group btn-group" role="group" aria-label="View Switcher">
+            <button type="button" class="btn active font-monospace text-xs" id="btnGridView" onclick="switchView('grid')">
+                <i class="fa-solid fa-grip-vertical me-1"></i> GRID
+            </button>
+            <button type="button" class="btn font-monospace text-xs" id="btnMatrixView" onclick="switchView('matrix')">
+                <i class="fa-solid fa-table-cells me-1"></i> MATRIX
+            </button>
+        </div>
+    </div>
+</div>
+
+{% set total_perms = permissions|length %}
+
+<!-- GRID VIEW -->
+<div class="row g-4" id="gridViewContainer">
+    {% if roles %}
+        {% for r in roles %}
+        {% set role_type = 'system' if r.name in ['Admin', 'Manager', 'Employee', 'Auditor'] else 'custom' %}
+        {% if total_perms > 0 %}
+            {% set coverage_pct = (r.permissions|length / total_perms * 100)|round|int %}
+        {% else %}
+            {% set coverage_pct = 0 %}
+        {% endif %}
+        
+        <div class="col-xl-6 role-card-wrapper" data-role-name="{{ r.name|lower }}" data-role-desc="{{ (r.description or '')|lower }}" data-role-type="{{ role_type }}">
+            <div class="role-grid-card h-100 {{ 'role-system-border' if role_type == 'system' else 'role-custom-border' }}">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="fw-bold text-light mb-0">{{ r.name }}</h4>
+                        {% if role_type == 'system' %}
+                        <span class="badge-custom-system"><i class="fa-solid fa-server me-1"></i> SYSTEM ROLE</span>
+                        {% else %}
+                        <span class="badge-custom-user"><i class="fa-solid fa-user-gear me-1"></i> CUSTOM ROLE</span>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-secondary text-sm mb-3" style="line-height: 1.5; min-height: 44px;">
+                        {{ r.description or 'No administrative description provided for this profile.' }}
+                    </p>
+
+                    <!-- Coverage Progress bar -->
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-secondary font-monospace text-xs">PRIVILEGE COVERAGE</span>
+                        <span class="text-light font-monospace text-xs fw-bold">{{ coverage_pct }}% ({{ r.permissions|length }}/{{ total_perms }})</span>
+                    </div>
+                    <div class="coverage-meter-container">
+                        <div class="coverage-meter-bar {% if coverage_pct > 75 %}meter-high{% elif coverage_pct > 40 %}meter-medium{% else %}meter-low{% endif %}" data-coverage="{{ coverage_pct }}">
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-secondary font-monospace text-xs mb-3">GRANTED PRIVILEGES ({{ r.permissions|length }}):</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        {% if r.permissions %}
+                            {% for p in r.permissions %}
+                            <span class="privilege-chip font-monospace" title="{{ p.description }}">
+                                <span class="privilege-dot"></span> {{ p.name }}
+                            </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted font-monospace text-xs"><i class="fa-solid fa-circle-xmark text-danger me-1"></i> No permissions mapped to this role</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end border-top border-secondary pt-3 gap-2">
+                    <!-- Edit Mappings Button -->
+                    <button class="btn btn-sm text-info border border-info font-monospace py-1.5 px-3" style="background-color: rgba(59, 130, 246, 0.15);" data-bs-toggle="modal" data-bs-target="#editRoleModal{{ r.id }}">
+                        <i class="fa-solid fa-sliders me-1"></i> Configure Privileges
+                    </button>
+                    
+                    <!-- Delete Button for custom roles -->
+                    {% if role_type == 'custom' %}
+                    <form action="{{ url_for('admin.delete_role', role_id=r.id) }}" method="POST" class="d-inline form-delete-confirm">
+                        <button type="submit" class="btn btn-sm text-danger border border-danger font-monospace py-1.5 px-3" style="background-color: rgba(239, 68, 68, 0.15);">
+                            <i class="fa-solid fa-trash-can me-1"></i> Delete Role
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Role Modal -->
+        <div class="modal fade" id="editRoleModal{{ r.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content modal-content-premium text-light shadow-lg">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-gear text-primary me-2"></i> Configure Role: {{ r.name }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="{{ url_for('admin.edit_role', role_id=r.id) }}" method="POST">
+                        <div class="modal-body">
+                            <div class="mb-4">
+                                <label for="edit_desc_{{ r.id }}" class="form-label font-monospace text-xs">Role Description</label>
+                                <textarea name="description" id="edit_desc_{{ r.id }}" rows="2" class="form-control bg-black text-light border-secondary" required>{{ r.description }}</textarea>
+                            </div>
+                            
+                            <label class="form-label font-monospace text-xs d-block mb-3">Map Privileges Checklist</label>
+                            
+                            <!-- Search Privileges inside Edit Modal -->
+                            <div class="search-wrapper mb-3">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" class="form-control bg-black text-light border-secondary search-input-custom" placeholder="Search privileges..." onkeyup="filterModalPermissions(this)">
+                            </div>
+
+                            <div class="perm-toggle-container" style="max-height: 280px; overflow-y: auto; padding-right: 5px;">
+                                {% for p in permissions %}
+                                <div class="perm-item-wrapper" data-name="{{ p.name }}" data-desc="{{ p.description or '' }}">
+                                    <div class="perm-item-info">
+                                        <span class="perm-item-title"><i class="fa-solid fa-key text-warning me-1"></i>{{ p.name }}</span>
+                                        <span class="perm-item-desc">{{ p.description or 'No context description defined.' }}</span>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" name="permissions" value="{{ p.id }}" id="chk_perm_{{ r.id }}_{{ p.id }}" role="switch"
+                                               {% if p in r.permissions %}checked{% endif %}>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-cyber-primary">Update Mappings</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="cyber-card text-center text-secondary py-5">
+                No roles found in the directory database.
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- 2D MATRIX BOARD VIEW -->
+<div class="matrix-table-wrapper" id="matrixViewContainer" style="display: none;">
+    <table class="cyber-table matrix-table align-middle">
+        <thead>
+            <tr>
+                <th style="min-width: 220px;" class="bg-black text-start">Role Profile</th>
+                {% for p in permissions %}
+                <th class="text-center font-monospace" title="{{ p.description }}" style="font-size: 0.75rem; min-width: 140px;">
+                    <i class="fa-solid fa-key text-warning me-1"></i>{{ p.name }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in roles %}
+            {% set role_type = 'system' if r.name in ['Admin', 'Manager', 'Employee', 'Auditor'] else 'custom' %}
+            <tr data-role-name="{{ r.name|lower }}" data-role-type="{{ role_type }}" class="matrix-row">
+                <td class="bg-black text-start">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="fw-bold text-light">{{ r.name }}</div>
+                        <span class="font-monospace text-secondary text-xs" style="font-size: 0.65rem;">
+                            {% if role_type == 'system' %}SYSTEM{% else %}CUSTOM{% endif %}
+                        </span>
+                    </div>
+                </td>
+                {% for p in permissions %}
+                <td class="matrix-cell" title="{{ r.name }} ➜ {{ p.name }} ({{ 'Granted' if p in r.permissions else 'Not Granted' }})">
+                    {% if p in r.permissions %}
+                    <span class="matrix-indicator status-granted">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </span>
+                    {% else %}
+                    <span class="matrix-indicator status-denied">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </span>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Create Role Modal -->
+<div class="modal fade" id="createRoleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-content-premium text-light shadow-lg">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-plus text-primary me-2"></i> Provision Custom Security Role</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin.create_role') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="create_role_name" class="form-label font-monospace text-xs">Role Identifier Name</label>
+                        <input type="text" name="name" id="create_role_name" class="form-control bg-black text-light border-secondary" placeholder="e.g. IncidentResponse" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="create_role_desc" class="form-label font-monospace text-xs">Role Description / Context</label>
+                        <textarea name="description" id="create_role_desc" rows="2" class="form-control bg-black text-light border-secondary" placeholder="Brief explanation of this role's scope" required></textarea>
+                    </div>
+                    
+                    <label class="form-label font-monospace text-xs d-block mb-3">Initial Privileges Checklist</label>
+                    
+                    <!-- Search Privileges inside Create Modal -->
+                    <div class="search-wrapper mb-3">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" class="form-control bg-black text-light border-secondary search-input-custom" placeholder="Search privileges..." onkeyup="filterModalPermissions(this)">
+                    </div>
+
+                    <div class="perm-toggle-container" style="max-height: 280px; overflow-y: auto; padding-right: 5px;">
+                        {% for p in permissions %}
+                        <div class="perm-item-wrapper" data-name="{{ p.name }}" data-desc="{{ p.description or '' }}">
+                            <div class="perm-item-info">
+                                <span class="perm-item-title"><i class="fa-solid fa-key text-warning me-1"></i>{{ p.name }}</span>
+                                <span class="perm-item-desc">{{ p.description or 'No context description defined.' }}</span>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="permissions" value="{{ p.id }}" id="create_chk_perm_{{ p.id }}" role="switch">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-cyber-primary">Provision Role</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Clone Role Modal -->
+<div class="modal fade" id="cloneRoleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-premium text-light shadow-lg">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-copy text-primary me-2"></i> Clone Access Structure</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin.clone_role') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="clone_source" class="form-label font-monospace text-xs">Select Source Role</label>
+                        <select name="source_role_id" id="clone_source" class="form-select bg-black text-light border-secondary">
+                            {% for r in roles %}
+                            <option value="{{ r.id }}">{{ r.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="clone_target_name" class="form-label font-monospace text-xs">New Role Identifier Name</label>
+                        <input type="text" name="target_role_name" id="clone_target_name" class="form-control bg-black text-light border-secondary" placeholder="e.g. SeniorEmployee" required>
+                    </div>
+                    <div class="mb-1">
+                        <label for="clone_target_desc" class="form-label font-monospace text-xs">New Role Description</label>
+                        <textarea name="target_description" id="clone_target_desc" rows="2" class="form-control bg-black text-light border-secondary" placeholder="Scope details"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-cyber-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-cyber-primary">Execute Clone</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.coverage-meter-bar').forEach(bar => {
+            const pct = bar.getAttribute('data-coverage');
+            if (pct) {
+                bar.style.width = pct + '%';
+            }
+        });
+    });
+
+    let currentFilter = 'all';
+    let searchQuery = '';
+
+    function filterRoles() {
+        searchQuery = document.getElementById('roleSearchInput').value.toLowerCase();
+        applyFilters();
+    }
+
+    function setRoleFilter(type) {
+        currentFilter = type;
+        
+        // Update active class on filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn.getAttribute('data-filter') === type) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        applyFilters();
+    }
+
+    function applyFilters() {
+        // Filter Grid Cards
+        const cardWrappers = document.querySelectorAll('.role-card-wrapper');
+        cardWrappers.forEach(card => {
+            const roleName = card.getAttribute('data-role-name');
+            const roleDesc = card.getAttribute('data-role-desc');
+            const roleType = card.getAttribute('data-role-type');
+            
+            const matchesSearch = roleName.includes(searchQuery) || roleDesc.includes(searchQuery);
+            const matchesFilter = currentFilter === 'all' || roleType === currentFilter;
+            
+            if (matchesSearch && matchesFilter) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Filter Matrix Rows
+        const matrixRows = document.querySelectorAll('.matrix-row');
+        matrixRows.forEach(row => {
+            const roleName = row.getAttribute('data-role-name');
+            const roleType = row.getAttribute('data-role-type');
+            
+            const matchesSearch = roleName.includes(searchQuery);
+            const matchesFilter = currentFilter === 'all' || roleType === currentFilter;
+            
+            if (matchesSearch && matchesFilter) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    function switchView(mode) {
+        const gridView = document.getElementById('gridViewContainer');
+        const matrixView = document.getElementById('matrixViewContainer');
+        const btnGrid = document.getElementById('btnGridView');
+        const btnMatrix = document.getElementById('btnMatrixView');
+        
+        if (mode === 'grid') {
+            gridView.style.display = 'flex';
+            matrixView.style.display = 'none';
+            btnGrid.classList.add('active');
+            btnMatrix.classList.remove('active');
+        } else {
+            gridView.style.display = 'none';
+            matrixView.style.display = 'block';
+            btnGrid.classList.remove('active');
+            btnMatrix.classList.add('active');
+        }
+    }
+
+    function filterModalPermissions(input) {
+        const query = input.value.toLowerCase();
+        const modal = input.closest('.modal');
+        const items = modal.querySelectorAll('.perm-item-wrapper');
+        
+        items.forEach(item => {
+            const name = item.getAttribute('data-name').toLowerCase();
+            const desc = item.getAttribute('data-desc').toLowerCase();
+            
+            if (name.includes(query) || desc.includes(query)) {
+                item.style.setProperty('display', 'flex', 'important');
+            } else {
+                item.style.setProperty('display', 'none', 'important');
+            }
+        });
+    }
+</script>
+{% endblock %}

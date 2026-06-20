@@ -1,0 +1,120 @@
+/* Global Styles & Design System */
+:root {
+  --font-family: 'Outfit', sans-serif;
+  
+  /* Color Palette - HSL Dark Tech Theme */
+  --bg-primary: #0a0e17;
+  --bg-secondary: #101726;
+  --bg-glass: rgba(16, 23, 38, 0.7);
+  --border-color: #1f2d47;
+  --border-glow: rgba(0, 180, 216, 0.15);
+  
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  
+  --accent-cyan: #00f2fe;
+  --accent-blue: #4facfe;
+  --accent-red: #ff3860;
+  --accent-green: #00db8b;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --shadow-glow: 0 0 20px rgba(0, 242, 254, 0.2);
+  
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(79, 172, 254, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(0, 242, 254, 0.05) 0px, transparent 50%);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  min-height: 100vh;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Panel */
+.panel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-smooth);
+}
+
+.panel:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Interactive elements buttons & inputs */
+button {
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  border: none;
+  border-radius: 6px;
+  color: #030712;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  transition: var(--transition-smooth);
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+input {
+  background-color: rgba(3, 7, 18, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  padding: 0.75rem 1rem;
+  transition: var(--transition-smooth);
+  width: 100%;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+}
+
+/* Headers */
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  background: linear-gradient(135deg, #fff 0%, var(--color-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Micro-animations */
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 5px rgba(0, 242, 254, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); }
+  100% { box-shadow: 0 0 5px rgba(0, 242, 254, 0.2); }
+}
+
+.pulse-border {
+  animation: pulseGlow 3s infinite;
+}

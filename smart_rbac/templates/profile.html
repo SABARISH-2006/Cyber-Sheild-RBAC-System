@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile | CyberShield{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-light mb-0"><i class="fa-solid fa-user-shield text-primary me-2"></i> Security Profile Dashboard</h3>
+</div>
+
+<div class="row g-4">
+    <!-- Profile Card (Left panel) -->
+    <div class="col-xl-5">
+        <div class="cyber-card accent-blue text-center py-5">
+            {% if user.profile_photo and user.profile_photo != 'avatar-default.png' %}
+            <img src="{{ url_for('static', filename=user.profile_photo) }}" class="rounded-circle shadow border border-secondary mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+            {% else %}
+            <div class="avatar bg-primary text-white d-inline-flex align-items-center justify-content-center rounded-circle font-monospace fw-bold mb-4 shadow" style="width: 100px; height: 100px; font-size: 3rem;">
+                {{ user.username[0].upper() }}
+            </div>
+            {% endif %}
+            
+            <!-- Upload Photo Form -->
+            <form action="{{ url_for('profile_photo_upload') }}" method="POST" enctype="multipart/form-data" class="mb-4 px-3 text-start">
+                <label class="form-label font-monospace text-xs mb-2" style="font-size: 0.75rem; color: var(--text-secondary);"><i class="fa-solid fa-camera text-primary"></i> CHANGE IDENTITY AVATAR</label>
+                <div class="d-flex flex-column gap-2">
+                    <!-- Custom File Picker Button -->
+                    <label for="profile_photo" class="btn btn-sm btn-cyber-outline font-monospace w-100 py-2" id="file_label" style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-style: dashed;">
+                        <i class="fa-solid fa-file-image text-primary me-2"></i> SELECT AVATAR FILE
+                    </label>
+                    <input type="file" name="profile_photo" id="profile_photo" class="d-none" accept="image/*" required>
+                    
+                    <!-- File Name Display -->
+                    <div id="file_name_display" class="text-secondary font-monospace text-xs text-center py-1" style="font-size: 0.75rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px;">
+                        No file chosen
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-sm btn-cyber-primary font-monospace w-100">
+                        <i class="fa-solid fa-upload me-1"></i> UPLOAD PHOTO
+                    </button>
+                </div>
+            </form>
+            
+            <h4 class="fw-bold text-light mb-1">{{ user.username }}</h4>
+            <p class="text-secondary font-monospace text-xs mb-4">MEMBER SINCE: {{ user.created_at.strftime('%Y-%m-%d') }}</p>
+            
+            <div class="glass-panel text-start mb-0">
+                <div class="d-flex justify-content-between mb-3 border-bottom border-secondary pb-2">
+                    <span class="text-secondary font-monospace text-xs">EMAIL ADDRESS:</span>
+                    <span class="text-light fw-semibold text-xs">{{ user.email }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 border-bottom border-secondary pb-2">
+                    <span class="text-secondary font-monospace text-xs">ASSIGNED ROLE:</span>
+                    <span class="badge bg-dark border border-secondary text-primary font-monospace" style="font-size: 0.7rem;">{{ user.role }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 border-bottom border-secondary pb-2">
+                    <span class="text-secondary font-monospace text-xs">ACCOUNT STATUS:</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace" style="font-size: 0.7rem;">{{ user.status|upper }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-secondary font-monospace text-xs">LAST KNOWN OS:</span>
+                    <span class="text-light font-monospace text-xs">{{ user.last_login_device or 'N/A' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Options (Right panel) -->
+    <div class="col-xl-7">
+        <div class="cyber-card">
+            <h4 class="fw-bold text-light mb-3"><i class="fa-solid fa-user-pen text-primary me-2"></i> Update Security Credentials</h4>
+            
+            <form action="{{ url_for('profile_update') }}" method="POST" class="mb-4">
+                <div class="mb-3">
+                    <label for="profile_email" class="form-label">Update Registered Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text border-secondary bg-dark text-secondary"><i class="fa-solid fa-envelope"></i></span>
+                        <input type="email" name="email" id="profile_email" class="form-control cyber-input" value="{{ user.email }}" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-cyber-primary font-monospace">
+                    UPDATE EMAIL <i class="fa-solid fa-floppy-disk ms-1"></i>
+                </button>
+            </form>
+            
+            <hr class="border-secondary my-4">
+            
+            <h4 class="fw-bold text-light mb-3"><i class="fa-solid fa-key text-danger me-2"></i> Change Password</h4>
+            
+            <form action="{{ url_for('profile_change_password') }}" method="POST">
+                <div class="mb-3">
+                    <label for="current_password" class="form-label">Current Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text border-secondary bg-dark text-secondary"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" name="current_password" id="current_password" class="form-control cyber-input" placeholder="••••••••" required>
+                    </div>
+                </div>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="new_password" class="form-label">New Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-secondary bg-dark text-secondary"><i class="fa-solid fa-key"></i></span>
+                            <input type="password" name="new_password" id="new_password" class="form-control cyber-input" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="confirm_new_password" class="form-label">Confirm New Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-secondary bg-dark text-secondary"><i class="fa-solid fa-check"></i></span>
+                            <input type="password" name="confirm_new_password" id="confirm_new_password" class="form-control cyber-input" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-cyber-rose font-monospace">
+                    RESET SECURITY PASSWORD <i class="fa-solid fa-arrows-rotate ms-1"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const fileInput = document.getElementById('profile_photo');
+    const fileDisplay = document.getElementById('file_name_display');
+    if (fileInput && fileDisplay) {
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files && fileInput.files.length > 0) {
+                fileDisplay.textContent = fileInput.files[0].name;
+                fileDisplay.style.color = '#10b981'; // accent-emerald
+                fileDisplay.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            } else {
+                fileDisplay.textContent = "No file chosen";
+                fileDisplay.style.color = '#94a3b8'; // text-secondary
+                fileDisplay.style.borderColor = 'var(--border-color)';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

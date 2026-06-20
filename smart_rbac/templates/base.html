@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CyberShield Smart RBAC{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Core Custom Stylesheet -->
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if not no_sidebar %}
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>CYBER SHIELD RBAC</span>
+        </div>
+        <div class="sidebar-nav">
+            <a href="{{ url_for('auth.dashboard') }}" class="nav-link-custom {% if request.path == '/dashboard' or request.path == '/' %}active{% endif %}">
+                <i class="fa-solid fa-gauge-high"></i> Dashboard
+            </a>
+            
+            {% if has_permission('manage_users') %}
+            <a href="{{ url_for('admin.users_list') }}" class="nav-link-custom {% if '/admin/users' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-users-gear"></i> User Manager
+            </a>
+            <a href="{{ url_for('admin.registration_requests_list') }}" class="nav-link-custom {% if '/admin/registration' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-file-circle-check"></i> Registration Approval
+            </a>
+            {% endif %}
+
+            {% if has_permission('manage_roles') %}
+            <a href="{{ url_for('admin.roles_list') }}" class="nav-link-custom {% if '/admin/roles' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-user-shield"></i> Role Matrix
+            </a>
+            <a href="{{ url_for('admin.permissions_list') }}" class="nav-link-custom {% if '/admin/permissions' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-key"></i> Privilege Directory
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('requests.list_requests') }}" class="nav-link-custom {% if '/requests' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-envelope-open-text"></i> Access Requests
+            </a>
+
+            {% if has_permission('view_audit_logs') %}
+            <a href="{{ url_for('telemetry.logs_trail') }}" class="nav-link-custom {% if '/logs' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-list-check"></i> Audit Trails
+            </a>
+            {% endif %}
+
+            {% if has_permission('view_analytics') %}
+            <a href="{{ url_for('telemetry.threat_analytics') }}" class="nav-link-custom {% if '/analytics' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-chart-line"></i> Threat Analytics
+            </a>
+            {% endif %}
+
+
+        </div>
+    </div>
+
+    <div class="main-wrapper">
+        <header class="main-header">
+            <button class="btn btn-dark d-md-none" id="sidebarToggle">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="d-none d-md-flex align-items-center gap-2">
+                <span class="text-secondary"><i class="fa-solid fa-terminal text-primary"></i> SYSTEM_STATUS:</span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle">SECURED</span>
+            </div>
+            
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center gap-3 text-decoration-none dropdown-toggle" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="text-end d-none d-sm-block">
+                        <div class="fw-semibold text-light">{{ user.username }}</div>
+                        <small class="text-secondary font-monospace" style="font-size: 0.75rem;">ROLE: {{ user.role }} | LOGIN ID: {{ user.login_id }}</small>
+                    </div>
+                    {% if user.profile_photo and user.profile_photo != 'avatar-default.png' %}
+                    <img src="{{ url_for('static', filename=user.profile_photo) }}" class="rounded-circle border border-secondary" style="width: 40px; height: 40px; object-fit: cover;">
+                    {% else %}
+                    <div class="avatar bg-primary text-white d-flex align-items-center justify-content-center rounded-circle font-monospace fw-bold" style="width: 40px; height: 40px;">
+                        {{ user.username[0].upper() }}
+                    </div>
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark border-secondary bg-dark shadow" aria-labelledby="profileDropdown">
+                    <li>
+                        <a class="dropdown-item font-monospace text-light py-2" href="{{ url_for('profile_view') }}">
+                            <i class="fa-solid fa-user text-primary me-2"></i> My Profile
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item font-monospace text-light py-2" href="{{ url_for('settings_view') }}">
+                            <i class="fa-solid fa-sliders text-primary me-2"></i> Settings
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider border-secondary"></li>
+                    <li>
+                        <a class="dropdown-item font-monospace text-danger py-2" href="{{ url_for('auth.logout') }}">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </header>
+        
+        <main class="main-content">
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show border-0 rounded-3 shadow-lg" role="alert">
+                            <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-exclamation{% endif %} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="position-fixed top-0 start-50 translate-middle-x mt-4 z-3 w-100 px-3" style="max-width: 480px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show border-0 rounded-3 shadow-lg" role="alert">
+                            <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-exclamation{% endif %} me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block auth_content %}{% endblock %}
+    </main>
+    {% endif %}
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Core Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

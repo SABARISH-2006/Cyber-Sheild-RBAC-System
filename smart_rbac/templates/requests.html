@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Access Requests | CyberShield Smart RBAC{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Form to Submit Request (stacked vertically) -->
+    <div class="col-12">
+        <div class="cyber-card accent-blue">
+            <h4 class="fw-bold text-light mb-3"><i class="fa-solid fa-file-signature text-primary me-2"></i> Request Access</h4>
+            <p class="text-secondary text-sm mb-4">
+                Need extra privileges to perform compliance tests or administrative operations? Submit a sequential authorization request below.
+            </p>
+            
+            <form action="{{ url_for('requests.submit_request') }}" method="POST">
+                <div class="mb-3">
+                    <label for="req_permission" class="form-label">Requested Privilege Key</label>
+                    <select name="requested_permission" id="req_permission" class="form-select bg-black text-light border-secondary font-monospace" required>
+                        <option value="" disabled selected>-- Select Privilege --</option>
+                        {% for p in permissions %}
+                        <option value="{{ p.name }}">{{ p.name }} ({{ p.description or 'No desc' }})</option>
+                        {% endfor %}
+                        <option value="custom_admin_privilege">custom_admin_privilege (Ad-hoc admin action)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="req_reason" class="form-label">Business Justification Reason</label>
+                    <textarea name="reason" id="req_reason" rows="4" class="form-control bg-black text-light border-secondary" placeholder="Specify why you require this privilege for your business duties." required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-cyber-primary w-100 font-monospace">
+                    SUBMIT PIPELINE REQUEST <i class="fa-solid fa-paper-plane ms-1"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Requests Queue (stacked vertically) -->
+    <div class="col-12">
+        <div class="cyber-card">
+            <h4 class="fw-bold text-light mb-3"><i class="fa-solid fa-list-check text-primary me-2"></i> Requests Pipeline Queue</h4>
+            
+            <div class="cyber-table-container">
+                <table class="cyber-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Requested Privilege</th>
+                            <th>Business Justification</th>
+                            <th>Status Badge</th>
+                            <th>Evaluator Details</th>
+                            <th class="text-end">Pipeline Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if requests %}
+                            {% for r in requests %}
+                            <tr>
+                                <td class="fw-bold">{{ r.user.username }}</td>
+                                <td class="font-monospace text-info text-xs">{{ r.requested_permission }}</td>
+                                <td class="text-secondary text-xs" style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    {{ r.reason }}
+                                </td>
+                                <td>
+                                    <span class="badge-custom badge-{{ r.status }}">
+                                        <i class="fa-solid {% if r.status == 'approved' %}fa-circle-check{% elif r.status == 'rejected' %}fa-circle-xmark{% else %}fa-clock{% endif %}"></i>
+                                        {{ r.status|upper }}
+                                    </span>
+                                </td>
+                                <td class="text-secondary font-monospace text-xs" style="font-size: 0.75rem;">
+                                    {{ r.approved_by or 'None' }}
+                                </td>
+                                <td class="text-end">
+                                    {% if r.status == 'pending_manager' %}
+                                        <!-- Manager Approval Actions -->
+                                        {% if user.role in ['Manager', 'Admin'] %}
+                                        <div class="d-inline-flex gap-2">
+                                            <form action="{{ url_for('requests.approve_request', req_id=r.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm text-success border border-success font-monospace" style="background-color: rgba(16, 185, 129, 0.15); font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-check me-1"></i> Approve
+                                                </button>
+                                            </form>
+                                            <form action="{{ url_for('requests.reject_request', req_id=r.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm text-danger border border-danger font-monospace" style="background-color: rgba(239, 68, 68, 0.15); font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-xmark me-1"></i> Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-secondary font-monospace text-xs">Awaiting Mgr</span>
+                                        {% endif %}
+                                        
+                                    {% elif r.status == 'pending_admin' %}
+                                        <!-- Admin Approval Actions -->
+                                        {% if user.role == 'Admin' %}
+                                        <div class="d-inline-flex gap-2">
+                                            <form action="{{ url_for('requests.approve_request', req_id=r.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm text-primary border border-primary font-monospace" style="background-color: rgba(59, 130, 246, 0.15); font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-check-double me-1"></i> Grant
+                                                </button>
+                                            </form>
+                                            <form action="{{ url_for('requests.reject_request', req_id=r.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm text-danger border border-danger font-monospace" style="background-color: rgba(239, 68, 68, 0.15); font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-xmark me-1"></i> Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-secondary font-monospace text-xs">Awaiting Admin</span>
+                                        {% endif %}
+                                        
+                                    {% else %}
+                                        <!-- Completed Request -->
+                                        <span class="text-secondary text-xs"><i class="fa-solid fa-circle-minus"></i> Completed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-secondary font-monospace py-4">
+                                    No requests found in the current view boundary.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
