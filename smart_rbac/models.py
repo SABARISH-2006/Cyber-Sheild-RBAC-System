@@ -1,26 +1,52 @@
 import time
+import sqlite3
+import os
+import json
 from datetime import datetime
-from smart_rbac.utils.firebase_client import firebase_client
+
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'database', 'cyber_shield.db')
 
 _collection_cache = {}
-CACHE_TTL = 5.0  # 5 seconds cache lifetime
+CACHE_TTL = 300.0  # 5 minutes cache lifetime
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+_columns_cache = {}
+
+def get_columns(table_name):
+    if table_name not in _columns_cache:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        _columns_cache[table_name] = [row[1] for row in cursor.fetchall()]
+        conn.close()
+    return _columns_cache[table_name]
+
+def parse_datetime(dt_str):
+    if not dt_str:
+        return None
+    if isinstance(dt_str, datetime):
+        return dt_str
+    for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S'):
+        try:
+            return datetime.strptime(dt_str, fmt)
+        except ValueError:
+            pass
+    return dt_str
 
 def get_cached_collection(collection_name):
-    now = time.time()
-    if collection_name in _collection_cache:
-        expire_time, cached_docs = _collection_cache[collection_name]
-        if now < expire_time:
-            return cached_docs
     return None
 
 def set_cached_collection(collection_name, docs):
-    now = time.time()
-    _collection_cache[collection_name] = (now + CACHE_TTL, docs)
+    pass
 
 def invalidate_cache(collection_name):
-    _collection_cache.pop(collection_name, None)
+    pass
 
-class FirestoreModel:
+class BaseModel:
     collection_name = None
 
     def __init__(self, **kwargs):
@@ -31,16 +57,70 @@ class FirestoreModel:
             setattr(self, k, v)
 
     @classmethod
+    def _get_role_permissions(cls, role_name):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT p.name 
+            FROM permissions p
+            JOIN role_permissions rp ON p.id = rp.permission_id
+            JOIN roles r ON r.id = rp.role_id
+            WHERE r.name = ?
+        """, (role_name,))
+        perms = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        return perms
+
+    @classmethod
     def get(cls, doc_id):
         if not doc_id:
             return None
         cached_docs = get_cached_collection(cls.collection_name)
         if cached_docs is not None:
             for doc_data in cached_docs:
-                if doc_data.get('id') == doc_id:
+                if str(doc_data.get('id')) == str(doc_id):
                     return cls(**doc_data)
-        data = firebase_client.get_document(cls.collection_name, doc_id)
-        if data:
+        
+        table_name = cls.collection_name
+        columns = get_columns(table_name)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if table_name in ('roles', 'permissions'):
+            cursor.execute(f"SELECT * FROM {table_name} WHERE name = ?", (doc_id,))
+        else:
+            try:
+                db_id = int(doc_id)
+                cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?", (db_id,))
+            except ValueError:
+                conn.close()
+                return None
+                
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            data = dict(row)
+            if table_name == 'roles':
+                role_name = data.get('name')
+                data['permissions'] = cls._get_role_permissions(role_name)
+                data['id'] = role_name
+            elif table_name == 'permissions':
+                data['id'] = data.get('name')
+                
+            for col in columns:
+                if col == 'id' and table_name in ('roles', 'permissions'):
+                    continue
+                val = data[col]
+                if val and col in ('created_at', 'updated_at', 'timestamp', 'expires_at', 'triggered_at', 'approved_at', 'calculated_at'):
+                    data[col] = parse_datetime(val)
+                if col in ('is_used',):
+                    data[col] = bool(val)
+                if col in ('factors', 'details') and isinstance(val, str):
+                    try:
+                        data[col] = json.loads(val)
+                    except Exception:
+                        pass
             return cls(**data)
         return None
 
@@ -49,7 +129,40 @@ class FirestoreModel:
         cached_docs = get_cached_collection(cls.collection_name)
         if cached_docs is not None:
             return [cls(**d) for d in cached_docs]
-        docs = firebase_client.list_documents(cls.collection_name)
+            
+        table_name = cls.collection_name
+        columns = get_columns(table_name)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM {table_name}")
+        rows = cursor.fetchall()
+        conn.close()
+        
+        docs = []
+        for row in rows:
+            data = dict(row)
+            if table_name == 'roles':
+                role_name = data.get('name')
+                data['permissions'] = cls._get_role_permissions(role_name)
+                data['id'] = role_name
+            elif table_name == 'permissions':
+                data['id'] = data.get('name')
+                
+            for col in columns:
+                if col == 'id' and table_name in ('roles', 'permissions'):
+                    continue
+                val = data[col]
+                if val and col in ('created_at', 'updated_at', 'timestamp', 'expires_at', 'triggered_at', 'approved_at', 'calculated_at'):
+                    data[col] = parse_datetime(val)
+                if col in ('is_used',):
+                    data[col] = bool(val)
+                if col in ('factors', 'details') and isinstance(val, str):
+                    try:
+                        data[col] = json.loads(val)
+                    except Exception:
+                        pass
+            docs.append(data)
+            
         set_cached_collection(cls.collection_name, docs)
         return [cls(**d) for d in docs]
 
@@ -67,22 +180,125 @@ class FirestoreModel:
         return None
 
     def save(self):
+        table_name = self.collection_name
+        columns = get_columns(table_name)
         payload = self.to_dict()
-        if self.id:
-            firebase_client.create_document(self.collection_name, self.id, payload)
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if table_name in ('roles', 'permissions'):
+            name = payload.get('name')
+            cursor.execute(f"SELECT id FROM {table_name} WHERE name = ?", (name,))
+            row = cursor.fetchone()
+            
+            if row:
+                update_fields = [col for col in columns if col not in ('id', 'name', 'created_at')]
+                set_clause = ", ".join([f"{col} = ?" for col in update_fields])
+                values = [payload.get(col) for col in update_fields]
+                if 'updated_at' in columns:
+                    set_clause += ", updated_at = ?"
+                    values.append(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'))
+                values.append(name)
+                cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE name = ?", tuple(values))
+                db_id = row[0]
+            else:
+                insert_fields = [col for col in columns if col != 'id']
+                placeholders = ", ".join(["?"] * len(insert_fields))
+                values = []
+                for col in insert_fields:
+                    val = payload.get(col)
+                    if val is None and col == 'created_at':
+                        val = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
+                    elif val is None and col == 'updated_at':
+                        val = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
+                    elif isinstance(val, datetime):
+                        val = val.strftime('%Y-%m-%d %H:%M:%S.%f')
+                    values.append(val)
+                cursor.execute(f"INSERT INTO {table_name} ({', '.join(insert_fields)}) VALUES ({placeholders})", tuple(values))
+                db_id = cursor.lastrowid
+                
+            if table_name == 'roles':
+                cursor.execute("DELETE FROM role_permissions WHERE role_id = ?", (db_id,))
+                for perm_name in self._permissions_list:
+                    cursor.execute("SELECT id FROM permissions WHERE name = ?", (perm_name,))
+                    perm_row = cursor.fetchone()
+                    if perm_row:
+                        cursor.execute("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)", (db_id, perm_row[0]))
+            self.id = name
         else:
-            doc_id = firebase_client.create_document(self.collection_name, None, payload)
-            self.id = doc_id
-        invalidate_cache(self.collection_name)
+            existing_id = None
+            if self.id is not None:
+                try:
+                    existing_id = int(self.id)
+                except ValueError:
+                    pass
+            
+            db_payload = {}
+            for col in columns:
+                if col == 'id':
+                    continue
+                val = payload.get(col)
+                if col in ('factors', 'details') and (isinstance(val, list) or isinstance(val, dict)):
+                    val = json.dumps(val)
+                if isinstance(val, bool):
+                    val = 1 if val else 0
+                if isinstance(val, datetime):
+                    val = val.strftime('%Y-%m-%d %H:%M:%S.%f')
+                db_payload[col] = val
+                
+            if existing_id is not None:
+                update_fields = list(db_payload.keys())
+                if 'created_at' in update_fields:
+                    update_fields.remove('created_at')
+                set_clause = ", ".join([f"{col} = ?" for col in update_fields])
+                values = [db_payload[col] for col in update_fields]
+                if 'updated_at' in columns:
+                    set_clause += ", updated_at = ?"
+                    values.append(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'))
+                values.append(existing_id)
+                cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE id = ?", tuple(values))
+            else:
+                insert_fields = list(db_payload.keys())
+                placeholders = ", ".join(["?"] * len(insert_fields))
+                values = [db_payload[col] for col in insert_fields]
+                cursor.execute(f"INSERT INTO {table_name} ({', '.join(insert_fields)}) VALUES ({placeholders})", tuple(values))
+                self.id = cursor.lastrowid
+                
+        conn.commit()
+        conn.close()
+        invalidate_cache(table_name)
         return self
 
     def delete(self):
-        if self.id:
-            firebase_client.delete_document(self.collection_name, self.id)
-            invalidate_cache(self.collection_name)
+        if not self.id:
+            return
+        table_name = self.collection_name
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if table_name in ('roles', 'permissions'):
+            if table_name == 'roles':
+                cursor.execute("SELECT id FROM roles WHERE name = ?", (self.id,))
+                role_row = cursor.fetchone()
+                if role_row:
+                    cursor.execute("DELETE FROM role_permissions WHERE role_id = ?", (role_row[0],))
+            cursor.execute(f"DELETE FROM {table_name} WHERE name = ?", (self.id,))
+        else:
+            try:
+                db_id = int(self.id)
+                cursor.execute(f"DELETE FROM {table_name} WHERE id = ?", (db_id,))
+            except ValueError:
+                pass
+                
+        conn.commit()
+        conn.close()
+        invalidate_cache(table_name)
 
+# Alias to keep compatibility with any code referencing FirestoreModel
+FirestoreModel = BaseModel
 
-class User(FirestoreModel):
+class User(BaseModel):
     collection_name = 'users'
 
     def __init__(self, **kwargs):
@@ -180,7 +396,7 @@ class PermissionListProxy(list):
             self.role_obj._permissions_list.remove(perm.name)
 
 
-class Role(FirestoreModel):
+class Role(BaseModel):
     collection_name = 'roles'
 
     def __init__(self, **kwargs):
@@ -212,7 +428,7 @@ class Role(FirestoreModel):
         }
 
 
-class Permission(FirestoreModel):
+class Permission(BaseModel):
     collection_name = 'permissions'
 
     def __init__(self, **kwargs):
@@ -235,7 +451,7 @@ class Permission(FirestoreModel):
         }
 
 
-class AccessRequest(FirestoreModel):
+class AccessRequest(BaseModel):
     collection_name = 'access_requests'
 
     def __init__(self, **kwargs):
@@ -262,7 +478,7 @@ class AccessRequest(FirestoreModel):
         }
 
 
-class AuditLog(FirestoreModel):
+class AuditLog(BaseModel):
     collection_name = 'audit_logs'
 
     def __init__(self, **kwargs):
@@ -281,7 +497,7 @@ class AuditLog(FirestoreModel):
         }
 
 
-class OTP(FirestoreModel):
+class OTP(BaseModel):
     collection_name = 'otps'
 
     def __init__(self, **kwargs):
@@ -306,7 +522,7 @@ class OTP(FirestoreModel):
         }
 
 
-class RiskScore(FirestoreModel):
+class RiskScore(BaseModel):
     collection_name = 'risk_scores'
 
     def __init__(self, **kwargs):
@@ -331,7 +547,7 @@ class RiskScore(FirestoreModel):
         }
 
 
-class BehaviorAlert(FirestoreModel):
+class BehaviorAlert(BaseModel):
     collection_name = 'behavior_alerts'
 
     def __init__(self, **kwargs):
@@ -356,7 +572,7 @@ class BehaviorAlert(FirestoreModel):
         }
 
 
-class RegistrationRequest(FirestoreModel):
+class RegistrationRequest(BaseModel):
     collection_name = 'registration_requests'
 
     def __init__(self, **kwargs):

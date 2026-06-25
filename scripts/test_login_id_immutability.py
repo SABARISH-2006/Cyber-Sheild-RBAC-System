@@ -1,12 +1,31 @@
 #!/usr/bin/env python3
 """Test that login_id is truly immutable and permanent for users."""
 import sqlite3
+import sys
+import io
+
+from pathlib import Path
+
+# Ensure UTF-8 output on Windows terminals
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def test_login_id_immutability():
     """Verify login_id never changes once assigned."""
-    conn = sqlite3.connect('cyber_shield.db')
+    db_path = Path(__file__).parent.parent / 'database' / 'cyber_shield.db'
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
+    # Ensure testuser_permanent user exists
+    cursor.execute("SELECT id FROM users WHERE username = ?", ('testuser_permanent',))
+    if not cursor.fetchone():
+        print("Inserting missing testuser_permanent user...")
+        cursor.execute("""
+            INSERT INTO users (username, email, password_hash, role, status, login_id, failed_login_attempts, profile_photo) 
+            VALUES ('testuser_permanent', 'permanent@company.com', 'dummy_hash', 'Employee', 'active', 'EMP_PERM_999', 0, 'avatar-default.png')
+        """)
+        conn.commit()
+
     # Get testuser_permanent's login_id multiple times
     print("Testing Login ID Immutability...")
     print("-" * 50)

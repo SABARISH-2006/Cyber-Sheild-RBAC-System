@@ -2,13 +2,22 @@
 """Verify Superadmin Login ID Update"""
 
 import sqlite3
+import sys
+import io
+
+# Ensure UTF-8 output on Windows terminals
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 print("\n")
 print("╔" + "=" * 68 + "╗")
 print("║" + " " * 15 + "SUPERADMIN LOGIN ID VERIFICATION REPORT" + " " * 15 + "║")
 print("╚" + "=" * 68 + "╝")
 
-conn = sqlite3.connect('smart_rbac/cyber_shield.db')
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).parent.parent
+conn = sqlite3.connect(ROOT_DIR / 'database' / 'cyber_shield.db')
 cursor = conn.cursor()
 
 # Find superadmin by new login ID

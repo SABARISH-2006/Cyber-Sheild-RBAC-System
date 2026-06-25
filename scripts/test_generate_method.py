@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """Test that generate_login_id() method never regenerates an existing login_id."""
 import sys
-sys.path.insert(0, '/e/rbac-cybersecurity')
+import io
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from smart_rbac.models import db, User
+# Ensure UTF-8 output on Windows terminals
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+from smart_rbac.models import User
 from smart_rbac.app import create_app
 
 def test_generate_method_immutability():
@@ -13,12 +19,22 @@ def test_generate_method_immutability():
     
     app = create_app()
     with app.app_context():
-        # Get testuser_permanent
-        user = db.session.scalar(db.select(User).where(User.username == 'testuser_permanent'))
+        # Get testuser_permanent using sqlite compatibility method
+        user = User.find_by_username('testuser_permanent')
         
         if not user:
-            print("✗ User not found!")
-            return False
+            print("Creating missing testuser_permanent user...")
+            import bcrypt
+            pw_hash = bcrypt.hashpw(b'permanent123', bcrypt.gensalt()).decode('utf-8')
+            user = User(
+                username='testuser_permanent',
+                email='permanent@company.com',
+                password_hash=pw_hash,
+                role='Employee',
+                status='active',
+                login_id='EMP_PERM_999'
+            )
+            user.save()
         
         original_login_id = user.login_id
         print(f"Original Login ID: {original_login_id}")

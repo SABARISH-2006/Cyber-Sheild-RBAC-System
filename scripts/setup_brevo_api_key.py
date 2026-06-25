@@ -89,7 +89,7 @@ def test_api_key(api_key):
 
 def update_env_file(api_key, sender_email):
     """Update .env file with new configuration"""
-    env_path = Path(__file__).parent / '.env'
+    env_path = Path(__file__).parent.parent / '.env'
     
     print("\n" + "="*70)
     print("UPDATING .env FILE")

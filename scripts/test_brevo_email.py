@@ -10,10 +10,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv(Path(__file__).parent / '.env')
+load_dotenv(Path(__file__).parent.parent / '.env')
 
-# Add smart_rbac to path
-sys.path.insert(0, str(Path(__file__).parent / 'smart_rbac'))
+# Add workspace root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def test_brevo_config():
     """Test 1: Verify Brevo configuration"""

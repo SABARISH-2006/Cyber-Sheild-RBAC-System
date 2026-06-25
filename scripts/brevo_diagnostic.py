@@ -11,7 +11,7 @@ def show_status():
     """Show current system status"""
     
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent / '.env')
+    load_dotenv(Path(__file__).parent.parent / '.env')
     
     print("\n" + "="*70)
     print("BREVO EMAIL SYSTEM - DIAGNOSTIC REPORT")
@@ -36,9 +36,9 @@ def show_status():
     print("\n[CHECK 2] CONFIGURATION FILES")
     print("-" * 70)
     
-    env_path = Path(__file__).parent / '.env'
-    config_path = Path(__file__).parent / 'smart_rbac' / 'config.py'
-    helper_path = Path(__file__).parent / 'smart_rbac' / 'utils' / 'email_helper.py'
+    env_path = Path(__file__).parent.parent / '.env'
+    config_path = Path(__file__).parent.parent / 'smart_rbac' / 'config.py'
+    helper_path = Path(__file__).parent.parent / 'smart_rbac' / 'utils' / 'email_helper.py'
     
     print(f"  {'.env file':<30} {'✓' if env_path.exists() else '✗'}")
     print(f"  {'config.py':<30} {'✓' if config_path.exists() else '✗'}")

@@ -82,13 +82,16 @@ def export_logs_csv():
 def threat_analytics():
     """Display Behavior Alerts and UBA telemetry dashboard."""
     alerts = BehaviorAlert.get_all()
+    all_scores = RiskScore.get_all()
+    all_users = User.get_all()
+        
     alerts.sort(key=lambda x: x.triggered_at or datetime.min, reverse=True)
     
     # High risk score logins count
-    high_risk_count = sum(1 for rs in RiskScore.get_all() if rs.risk_level == 'High')
+    high_risk_count = sum(1 for rs in all_scores if rs.risk_level == 'High')
     
     # Locked/suspended account count
-    locked_count = sum(1 for u in User.get_all() if u.status == 'suspended')
+    locked_count = sum(1 for u in all_users if u.status == 'suspended')
     
     return render_template(
         'analytics.html', 
@@ -133,15 +136,20 @@ def resolve_alert(alert_id):
 def api_telemetry_charts():
     """Retrieve telemetry metrics for loading Chart.js visual structures."""
     try:
+        all_users = User.get_all()
+        all_scores = RiskScore.get_all()
+        all_logs = AuditLog.get_all()
+        all_alerts = BehaviorAlert.get_all()
+
         # 1. Role Distribution
         role_data = {}
-        for u in User.get_all():
+        for u in all_users:
             if u.role:
                 role_data[u.role] = role_data.get(u.role, 0) + 1
         
         # 2. Risk Level Distribution
         risk_data = {'Low': 0, 'Medium': 0, 'High': 0}
-        for rs in RiskScore.get_all():
+        for rs in all_scores:
             if rs.risk_level in risk_data:
                 risk_data[rs.risk_level] += 1
             else:
@@ -150,7 +158,7 @@ def api_telemetry_charts():
         # 3. Security Actions Trend
         # Group top actions
         action_counts = {}
-        for log in AuditLog.get_all():
+        for log in all_logs:
             if log.action:
                 action_counts[log.action] = action_counts.get(log.action, 0) + 1
         sorted_actions = sorted(action_counts.items(), key=lambda x: x[1], reverse=True)[:7]
@@ -158,7 +166,7 @@ def api_telemetry_charts():
 
         # 4. Behavioral Alert Categories
         alert_data = {}
-        for alert in BehaviorAlert.get_all():
+        for alert in all_alerts:
             if alert.alert_type:
                 alert_data[alert.alert_type] = alert_data.get(alert.alert_type, 0) + 1
 

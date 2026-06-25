@@ -3,13 +3,20 @@
 
 import os
 import sys
+import io
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from pathlib import Path
 from dotenv import load_dotenv
 
+# Ensure UTF-8 output on Windows terminals
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 # Load environment
-load_dotenv()
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / '.env')
 
 print("=" * 70)
 print("PASSWORD RECOVERY EMAIL TEST")

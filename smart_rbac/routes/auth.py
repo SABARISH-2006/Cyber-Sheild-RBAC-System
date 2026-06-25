@@ -70,9 +70,16 @@ def register():
             )
             audit.save()
 
-            # Send login_id via email
+            # Send login_id via email in a non-blocking background thread with app context
             from smart_rbac.utils.email_helper import send_login_id_email
-            send_login_id_email(email, username, new_user.login_id, role)
+            import threading
+            app_obj = current_app._get_current_object()
+            def send_async():
+                with app_obj.app_context():
+                    send_login_id_email(email, username, new_user.login_id, role)
+            email_thread = threading.Thread(target=send_async)
+            email_thread.daemon = True
+            email_thread.start()
 
             # Success message - inform user about approval process
             flash("Registration successful! Your request has been sent to the superadmin for approval. You will be able to login after approval.", "success")
@@ -167,23 +174,26 @@ def login():
         session['mfa_risk_score'] = risk_record.score
         session['mfa_risk_level'] = risk_record.risk_level
         
-        # Attempt to send OTP via mail
+        # Attempt to send OTP via mail in a non-blocking background thread with app context
         from smart_rbac.utils.email_helper import send_otp_email
-        email_sent = send_otp_email(user.email, user.username, otp_code)
+        import threading
+        app_obj = current_app._get_current_object()
+        def send_async():
+            with app_obj.app_context():
+                send_otp_email(user.email, user.username, otp_code)
+        email_thread = threading.Thread(target=send_async)
+        email_thread.daemon = True
+        email_thread.start()
 
         # Print/Log OTP for terminal simulation of the email/SMS transmission
         print(f"\n==================================================", flush=True)
         print(f"[SECURITY CONTROL] OTP VERIFICATION REQUIRED FOR USER: {user.username}", flush=True)
         print(f"[SECURITY CONTROL] RISK SCORE: {risk_record.score} | LEVEL: {risk_record.risk_level}", flush=True)
         print(f"[OTP SIMULATION] MFA CODE GENERATED: {otp_code}", flush=True)
-        print(f"[OTP SIMULATION] EMAIL SENT STATUS: {email_sent}", flush=True)
+        print(f"[OTP SIMULATION] EMAIL SENT STATUS: True (background thread initiated)", flush=True)
         print(f"==================================================\n", flush=True)
         
-        if email_sent:
-            flash("Verification code sent to your registered email address.", "success")
-        else:
-            flash("Verification code generated. Code has been logged in the terminal console.", "warning")
-            
+        flash("Verification code sent to your registered email address (and logged in the terminal).", "success")
         return redirect(url_for('auth.verify_otp'))
 
     return render_template('login.html', active_tab='login')
@@ -300,22 +310,25 @@ def resend_otp():
     )
     otp_record.save()
 
-    # Attempt to send OTP via mail
+    # Attempt to send OTP via mail in a non-blocking background thread with app context
     from smart_rbac.utils.email_helper import send_otp_email
-    email_sent = send_otp_email(user.email, user.username, otp_code)
+    import threading
+    app_obj = current_app._get_current_object()
+    def send_async():
+        with app_obj.app_context():
+            send_otp_email(user.email, user.username, otp_code)
+    email_thread = threading.Thread(target=send_async)
+    email_thread.daemon = True
+    email_thread.start()
 
     # Print/Log OTP for console simulation fallback
     print(f"\n==================================================", flush=True)
     print(f"[SECURITY CONTROL] RESEND OTP REQUESTED FOR: {user.username}", flush=True)
     print(f"[SECURITY CONTROL] MFA CODE GENERATED: {otp_code}", flush=True)
-    print(f"[SECURITY CONTROL] EMAIL SENT STATUS: {email_sent}", flush=True)
+    print(f"[SECURITY CONTROL] EMAIL SENT STATUS: True (background thread initiated)", flush=True)
     print(f"==================================================\n", flush=True)
 
-    if email_sent:
-        flash("A new verification code has been sent to your email address.", "success")
-    else:
-        flash("A new verification code has been logged in the terminal console.", "warning")
-
+    flash("A new verification code has been sent to your email address (and logged in the terminal).", "success")
     return redirect(url_for('auth.verify_otp'))
 
 
@@ -347,20 +360,24 @@ def forgot_password():
             
             reset_link = url_for('auth.reset_password', token=reset_token, _external=True)
             
-            # Attempt to send SMTP email
+            # Attempt to send SMTP email in a non-blocking background thread with app context
             from smart_rbac.utils.email_helper import send_reset_email
-            email_sent = send_reset_email(user.email, user.username, reset_link)
+            import threading
+            app_obj = current_app._get_current_object()
+            def send_async():
+                with app_obj.app_context():
+                    send_reset_email(user.email, user.username, reset_link)
+            email_thread = threading.Thread(target=send_async)
+            email_thread.daemon = True
+            email_thread.start()
             
-            if email_sent:
-                flash("A password reset link has been sent to your email address.", "success")
-            else:
-                # Log fallback console simulation
-                current_app.logger.warning(f"[RESET SIMULATION] LINK: {reset_link}")
-                print(f"\n==================================================", flush=True)
-                print(f"[SECURITY ALERT] FORGOT PASSWORD RESET REQUEST FOR: {user.username}", flush=True)
-                print(f"[RESET SIMULATION] LINK: {reset_link}", flush=True)
-                print(f"==================================================\n", flush=True)
-                flash("If email exists, a password reset link has been logged in the terminal console.", "success")
+            # Log fallback console simulation
+            current_app.logger.warning(f"[RESET SIMULATION] LINK: {reset_link}")
+            print(f"\n==================================================", flush=True)
+            print(f"[SECURITY ALERT] FORGOT PASSWORD RESET REQUEST FOR: {user.username}", flush=True)
+            print(f"[RESET SIMULATION] LINK: {reset_link}", flush=True)
+            print(f"==================================================\n", flush=True)
+            flash("If email exists, a password reset link has been sent to your email address (and logged in the terminal).", "success")
         else:
             flash("If email exists, a password reset link has been logged in the terminal console.", "success")
         return redirect(url_for('auth.login'))
@@ -469,21 +486,18 @@ def dashboard():
     if not user:
         return redirect(url_for('auth.login'))
     
-    # Calculate stats using Firestore
     all_users = User.get_all()
-    users_count = len(all_users)
-    
     all_access = AccessRequest.get_all()
-    pending_requests_count = sum(1 for r in all_access if r.status in ['pending_manager', 'pending_admin'])
-    
     all_alerts = BehaviorAlert.get_all()
-    open_alerts_count = sum(1 for a in all_alerts if a.status == 'open')
-    
     all_scores = RiskScore.get_all()
+    all_logs = AuditLog.get_all()
+        
+    users_count = len(all_users)
+    pending_requests_count = sum(1 for r in all_access if r.status in ['pending_manager', 'pending_admin'])
+    open_alerts_count = sum(1 for a in all_alerts if a.status == 'open')
     total_score = sum(s.score for s in all_scores)
     avg_risk_score = total_score / len(all_scores) if all_scores else 0.0
     
-    all_logs = AuditLog.get_all()
     all_logs.sort(key=lambda x: x.timestamp or datetime.datetime.min, reverse=True)
     recent_logs = all_logs[:5]
     

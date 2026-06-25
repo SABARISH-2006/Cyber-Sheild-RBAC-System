@@ -3,16 +3,24 @@
 
 import os
 import sqlite3
+import sys
+import io
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Ensure UTF-8 output on Windows terminals
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / '.env')
 
 print("\n")
 print("╔" + "=" * 68 + "╗")
 print("║" + " " * 20 + "EMAIL SYSTEM STATUS REPORT" + " " * 22 + "║")
 print("╚" + "=" * 68 + "╝")
 
-conn = sqlite3.connect('smart_rbac/cyber_shield.db')
+conn = sqlite3.connect(ROOT_DIR / 'database' / 'cyber_shield.db')
 cursor = conn.cursor()
 
 print(f"\n📧 EMAIL CONFIGURATION")

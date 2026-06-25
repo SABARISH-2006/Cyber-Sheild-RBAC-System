@@ -6,18 +6,21 @@ import sys
 import sqlite3
 from dotenv import load_dotenv
 
+from pathlib import Path
+
 # Setup path
-sys.path.insert(0, os.path.dirname(__file__))
+ROOT_DIR = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 
 # Load environment variables
-load_dotenv()
+load_dotenv(ROOT_DIR / '.env')
 
 # Test 1: Check database tables and pending registrations
 print("=" * 60)
 print("TEST 1: Check Database Structure and Pending Registrations")
 print("=" * 60)
 
-conn = sqlite3.connect('smart_rbac/cyber_shield.db')
+conn = sqlite3.connect(ROOT_DIR / 'database' / 'cyber_shield.db')
 cursor = conn.cursor()
 
 # First, find all tables

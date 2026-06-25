@@ -3,21 +3,28 @@
 
 import os
 import sys
+import io
 import sqlite3
+from pathlib import Path
 from dotenv import load_dotenv
 
+# Ensure UTF-8 output on Windows terminals
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 # Setup path
-sys.path.insert(0, os.path.dirname(__file__))
+ROOT_DIR = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 
 # Load environment
-load_dotenv()
+load_dotenv(ROOT_DIR / '.env')
 
 # Check the new registration
 print("=" * 70)
 print("EMAIL SENDING VERIFICATION REPORT")
 print("=" * 70)
 
-conn = sqlite3.connect('smart_rbac/cyber_shield.db')
+conn = sqlite3.connect(ROOT_DIR / 'database' / 'cyber_shield.db')
 cursor = conn.cursor()
 
 # Get the latest pending approval user

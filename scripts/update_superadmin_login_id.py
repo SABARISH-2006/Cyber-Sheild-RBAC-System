@@ -7,7 +7,10 @@ print("=" * 70)
 print("SUPERADMIN LOGIN ID UPDATE")
 print("=" * 70)
 
-conn = sqlite3.connect('smart_rbac/cyber_shield.db')
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).parent.parent
+conn = sqlite3.connect(ROOT_DIR / 'database' / 'cyber_shield.db')
 cursor = conn.cursor()
 
 # Find SABARISH K C user

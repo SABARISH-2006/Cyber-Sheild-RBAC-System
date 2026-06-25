@@ -6,7 +6,7 @@ Run this once to update the database schema.
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'cyber_shield.db')
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'database', 'cyber_shield.db')
 
 def migrate():
     """Add login_id column to users table if it doesn't exist."""
